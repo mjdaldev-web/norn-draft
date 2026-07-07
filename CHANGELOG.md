@@ -3,7 +3,7 @@
 ## 1.2.0
 
 - Added Gemini model selection in Settings.
-- Added Auto / Recommended, Flash-Lite, Flash, Pro, and Custom Gemini model choices.
+- Limited the preset list to verified working Flash options with Custom model names for advanced access.
 - Added Custom Gemini model name storage and validation.
 - Improved Gemini model-specific error clarity.
 

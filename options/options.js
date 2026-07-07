@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const storage = chrome.storage.local;
   let statusTimeoutId = null;
-  const geminiModelPresets = ["auto", "flash-lite", "flash", "pro", "custom"];
+  const geminiModelPresets = ["auto", "flash-lite", "flash", "custom"];
 
   const clearStatusTimer = () => {
     if (statusTimeoutId) {
