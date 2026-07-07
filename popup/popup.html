@@ -9,18 +9,56 @@
   <body>
     <main class="popup">
       <header class="popup__header">
-        <h1>Norn Draft</h1>
-        <p>Extension scaffold ready for future draft tools.</p>
+        <div>
+          <p class="popup__eyebrow">Reply assistant</p>
+          <h1>Norn Draft</h1>
+        </div>
+        <p>Draft polished replies in the right tone.</p>
       </header>
 
-      <section class="popup__panel" aria-labelledby="status-title">
-        <h2 id="status-title">Status</h2>
-        <p>API integration has not been added yet.</p>
+      <section class="tone" aria-labelledby="tone-title">
+        <h2 id="tone-title">Tone</h2>
+        <div class="tone__chips" role="radiogroup" aria-label="Reply tone">
+          <button class="tone-chip is-selected" type="button" role="radio" aria-checked="true" data-tone="Professional">
+            Professional
+          </button>
+          <button class="tone-chip" type="button" role="radio" aria-checked="false" data-tone="Friendly">
+            Friendly
+          </button>
+          <button class="tone-chip" type="button" role="radio" aria-checked="false" data-tone="Empathetic">
+            Empathetic
+          </button>
+          <button class="tone-chip" type="button" role="radio" aria-checked="false" data-tone="Instructional">
+            Instructional
+          </button>
+          <button class="tone-chip" type="button" role="radio" aria-checked="false" data-tone="Short">
+            Short
+          </button>
+          <button class="tone-chip" type="button" role="radio" aria-checked="false" data-tone="Detailed">
+            Detailed
+          </button>
+        </div>
       </section>
 
-      <footer class="popup__footer">
-        <a href="../options/options.html" target="_blank" rel="noreferrer">Open settings</a>
-      </footer>
+      <section class="composer" aria-labelledby="prompt-title">
+        <label id="prompt-title" for="prompt">Message or question</label>
+        <textarea id="prompt" rows="5" placeholder="Paste or type what you want to reply to."></textarea>
+        <button id="generate" class="button button--primary" type="button">Generate Reply</button>
+      </section>
+
+      <section class="output" aria-labelledby="output-title">
+        <div class="output__header">
+          <h2 id="output-title">Recommended Reply</h2>
+          <button id="copy" class="button button--secondary" type="button">Copy Reply</button>
+        </div>
+        <div id="reply-output" class="output__content" aria-live="polite">
+          Your recommended reply will appear here.
+        </div>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <p class="privacy-note">V1 does not read the current page. Only text you type here is used.</p>
     </main>
 
     <script src="popup.js"></script>
