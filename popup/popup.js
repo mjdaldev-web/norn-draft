@@ -11,6 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const OPENAI_RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
   const POPUP_DRAFT_STORAGE_KEY = "nornDraftPopupDraftState";
+  const REPLY_HISTORY_STORAGE_KEY = "nornDraftReplyHistory";
+  const DEFAULT_HISTORY_LIMIT = 10;
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
     apiKey: "",
@@ -19,7 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
     geminiModelPreset: "auto",
     geminiCustomModel: "",
     openaiModelPreset: "recommended",
-    openaiCustomModel: ""
+    openaiCustomModel: "",
+    historyEnabled: false,
+    historyLimit: "10"
   };
 
   const toneChips = Array.from(document.querySelectorAll(".tone-chip"));
@@ -31,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const generateButton = document.querySelector("#generate");
   const clearButton = document.querySelector("#clear");
   const copyButton = document.querySelector("#copy");
+  const clearHistoryButton = document.querySelector("#clear-history");
+  const historyList = document.querySelector("#history-list");
   const settingsButton = document.querySelector("#settings");
   const output = document.querySelector("#reply-output");
   const status = document.querySelector("#status");
@@ -42,6 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedMode = "Generate Reply";
   let generatedReply = "";
   let currentSettings = { ...DEFAULT_SETTINGS };
+  let replyHistory = [];
   let statusTimeoutId = null;
   let saveDraftTimeoutId = null;
 
@@ -107,6 +114,71 @@ document.addEventListener("DOMContentLoaded", () => {
     generateButton.textContent = isLoading ? "Generating..." : "Generate Reply";
   };
 
+  const escapeHtml = (value) => {
+    return value.replace(/[&<>"']/g, (character) => {
+      const entities = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      };
+
+      return entities[character];
+    });
+  };
+
+  const getHistoryLimit = () => {
+    const parsedLimit = Number.parseInt(currentSettings.historyLimit, 10);
+    return parsedLimit === 20 ? 20 : DEFAULT_HISTORY_LIMIT;
+  };
+
+  const formatHistoryDate = (timestamp) => {
+    const date = new Date(timestamp);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Unknown date";
+    }
+
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  };
+
+  const getHistoryPreview = (reply) => {
+    const cleanReply = reply.replace(/\s+/g, " ").trim();
+    return cleanReply.length > 92 ? `${cleanReply.slice(0, 89)}...` : cleanReply;
+  };
+
+  const sanitizeHistoryItems = (items) => {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    return items
+      .filter((item) => {
+        return item
+          && typeof item === "object"
+          && typeof item.reply === "string"
+          && item.reply.trim()
+          && typeof item.id === "string";
+      })
+      .map((item) => ({
+        id: item.id,
+        reply: item.reply,
+        provider: typeof item.provider === "string" ? item.provider : "Unknown",
+        model: typeof item.model === "string" ? item.model : "Unknown model",
+        mode: validModes.includes(item.mode) ? item.mode : "Generate Reply",
+        tones: sanitizeTones(item.tones),
+        replyLength: typeof item.replyLength === "string" ? item.replyLength : DEFAULT_SETTINGS.replyLength,
+        timestamp: typeof item.timestamp === "string" ? item.timestamp : new Date().toISOString()
+      }))
+      .slice(0, getHistoryLimit());
+  };
+
   const getSelectedTones = () => {
     return [...selectedTones];
   };
@@ -137,6 +209,51 @@ document.addEventListener("DOMContentLoaded", () => {
       context: contextInput.value,
       generatedReply
     };
+  };
+
+  const saveReplyHistory = async () => {
+    await chrome.storage.local.set({
+      [REPLY_HISTORY_STORAGE_KEY]: replyHistory.slice(0, getHistoryLimit())
+    });
+  };
+
+  const renderHistory = () => {
+    if (!currentSettings.historyEnabled) {
+      historyList.innerHTML = '<p class="history__empty">Local history is off. Enable it in Settings to save generated replies.</p>';
+      clearHistoryButton.hidden = replyHistory.length === 0;
+      return;
+    }
+
+    if (replyHistory.length === 0) {
+      historyList.innerHTML = '<p class="history__empty">No saved replies yet.</p>';
+      clearHistoryButton.hidden = true;
+      return;
+    }
+
+    clearHistoryButton.hidden = false;
+    historyList.innerHTML = replyHistory
+      .map((item) => {
+        const meta = [
+          `${item.provider} / ${item.model}`,
+          item.mode,
+          item.tones.join(", "),
+          item.replyLength,
+          formatHistoryDate(item.timestamp)
+        ].join(" - ");
+
+        return `
+          <article class="history-item" data-history-id="${escapeHtml(item.id)}">
+            <p class="history-item__preview">${escapeHtml(getHistoryPreview(item.reply))}</p>
+            <p class="history-item__meta">${escapeHtml(meta)}</p>
+            <div class="history-item__actions">
+              <button class="button button--secondary" type="button" data-history-action="restore">Use</button>
+              <button class="button button--secondary" type="button" data-history-action="copy">Copy</button>
+              <button class="button button--secondary" type="button" data-history-action="delete">Delete</button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
   };
 
   const saveDraftState = async () => {
@@ -230,6 +347,46 @@ document.addEventListener("DOMContentLoaded", () => {
       currentSettings = { ...DEFAULT_SETTINGS, ...savedSettings };
     } catch (error) {
       currentSettings = { ...DEFAULT_SETTINGS };
+    }
+  };
+
+  const loadReplyHistory = async () => {
+    try {
+      const stored = await chrome.storage.local.get(REPLY_HISTORY_STORAGE_KEY);
+      replyHistory = sanitizeHistoryItems(stored[REPLY_HISTORY_STORAGE_KEY]);
+    } catch (error) {
+      replyHistory = [];
+    }
+
+    renderHistory();
+  };
+
+  const addReplyToHistory = async ({ reply, provider, model, mode, tones, replyLength }) => {
+    if (!currentSettings.historyEnabled || !reply.trim()) {
+      return true;
+    }
+
+    const item = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      reply,
+      provider,
+      model,
+      mode,
+      tones,
+      replyLength,
+      timestamp: new Date().toISOString()
+    };
+
+    replyHistory = [item, ...replyHistory].slice(0, getHistoryLimit());
+
+    try {
+      await saveReplyHistory();
+      renderHistory();
+      return true;
+    } catch (error) {
+      replyHistory = replyHistory.slice(1);
+      renderHistory();
+      return false;
     }
   };
 
@@ -605,7 +762,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       generatedReply = generationResult.reply;
       setOutput(generatedReply);
-      setStatus("Reply generated.", "success");
+      const historySaved = await addReplyToHistory({
+        reply: generatedReply,
+        provider: currentSettings.provider,
+        model: selectedModel,
+        mode: selectedMode,
+        tones: getSelectedTones(),
+        replyLength: currentSettings.replyLength
+      });
+      setStatus(
+        historySaved ? "Reply generated." : "Reply generated, but history could not be saved.",
+        historySaved ? "success" : "error"
+      );
       await saveDraftState();
     } catch (error) {
       generatedReply = "";
@@ -662,6 +830,66 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  clearHistoryButton.addEventListener("click", async () => {
+    replyHistory = [];
+
+    try {
+      await chrome.storage.local.set({ [REPLY_HISTORY_STORAGE_KEY]: [] });
+      renderHistory();
+      setStatus("Reply history cleared.", "success");
+    } catch (error) {
+      setStatus("Reply history could not be cleared. Please try again.", "error");
+    }
+  });
+
+  historyList.addEventListener("click", async (event) => {
+    const actionButton = event.target.closest("[data-history-action]");
+
+    if (!actionButton) {
+      return;
+    }
+
+    const historyItem = actionButton.closest("[data-history-id]");
+    const item = replyHistory.find((entry) => entry.id === historyItem?.dataset.historyId);
+
+    if (!item) {
+      setStatus("That history item is no longer available.", "validation");
+      return;
+    }
+
+    const action = actionButton.dataset.historyAction;
+
+    if (action === "restore") {
+      generatedReply = item.reply;
+      setOutput(generatedReply);
+      await saveDraftState();
+      setStatus("History reply restored.", "success");
+      return;
+    }
+
+    if (action === "copy") {
+      try {
+        await navigator.clipboard.writeText(item.reply);
+        setStatus("History reply copied to clipboard.", "success");
+      } catch (error) {
+        setStatus("Clipboard copy was not available. Select the reply text and copy it manually.", "error");
+      }
+      return;
+    }
+
+    if (action === "delete") {
+      replyHistory = replyHistory.filter((entry) => entry.id !== item.id);
+
+      try {
+        await saveReplyHistory();
+        renderHistory();
+        setStatus("History item deleted.", "success");
+      } catch (error) {
+        setStatus("History item could not be deleted. Please try again.", "error");
+      }
+    }
+  });
+
   settingsButton.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
   });
@@ -679,6 +907,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadSettings()
     .then(loadDraftState)
+    .then(loadReplyHistory)
     .then(() => {
       setStatus("");
     });

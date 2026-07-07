@@ -112,6 +112,28 @@ body {
   accent-color: #2459a6;
 }
 
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  color: #263244;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.toggle-row input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #2459a6;
+}
+
+.history-limit {
+  max-width: 240px;
+  margin-top: 14px;
+}
+
 .field {
   display: grid;
   gap: 7px;

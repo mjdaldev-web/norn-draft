@@ -1,12 +1,13 @@
 # Norn Draft Privacy
 
-Norn Draft V1.3 is designed to stay lightweight and explicit about what it uses.
+Norn Draft V1.4 is designed to stay lightweight and explicit about what it uses.
 
 ## What the Extension Uses
 
 - Text you type or paste into the popup
 - Optional context/details you type into the popup
 - Tone, provider, model, API key, and reply length settings saved in this browser
+- Optional local reply history if you enable it in Settings
 
 ## API Key Storage
 
@@ -20,9 +21,11 @@ Norn Draft V1 does not read the current page, tabs, browsing history, cookies, o
 
 ## Generated Replies
 
-Generated replies are displayed in the popup so you can review and copy them. Norn Draft V1.1 stores only the current popup draft state locally so your in-progress work can be restored if the popup closes.
+Generated replies are displayed in the popup so you can review and copy them. Norn Draft stores the current popup draft state locally so your in-progress work can be restored if the popup closes.
 
-Norn Draft does not store a generated-reply history list.
+Local reply history is disabled by default. If you enable it, Norn Draft stores only generated reply text, provider, model, mode, selected tones, reply length, and timestamp in `chrome.storage.local`.
+
+Local history does not store API keys, original prompt text, optional context/details, raw API responses, page URLs, page titles, browser page content, or clipboard data.
 
 ## External Requests
 

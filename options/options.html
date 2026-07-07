@@ -130,12 +130,39 @@
           </label>
         </section>
 
+        <section class="settings__panel" aria-labelledby="history-title">
+          <div class="settings__heading">
+            <h2 id="history-title">Local reply history</h2>
+            <p>Optional and off by default. Saved replies stay in this browser only.</p>
+          </div>
+
+          <label class="toggle-row" for="history-enabled">
+            <input id="history-enabled" name="historyEnabled" type="checkbox" />
+            <span>Enable local reply history</span>
+          </label>
+
+          <label class="field history-limit" for="history-limit">
+            <span>History limit</span>
+            <select id="history-limit" name="historyLimit">
+              <option value="10">Latest 10 replies</option>
+              <option value="20">Latest 20 replies</option>
+            </select>
+          </label>
+
+          <p class="field-help">
+            Local history saves generated replies and basic metadata only. Your original prompt, optional context, and API key are never saved in history.
+          </p>
+
+          <button id="clear-history" class="button button--secondary button--inline" type="button">Clear Reply History</button>
+        </section>
+
         <section class="settings__panel settings__panel--note" aria-labelledby="privacy-title">
           <h2 id="privacy-title">Privacy and security</h2>
           <ul>
             <li>API key is stored locally in this browser using chrome.storage.local.</li>
-            <li>Norn Draft V1.3 does not read the current page.</li>
+            <li>Norn Draft V1.4 does not read the current page.</li>
             <li>Only popup text, selected tones, mode, and optional context are sent to the chosen provider when generating.</li>
+            <li>Local reply history is off by default and stores only generated replies plus basic metadata when enabled.</li>
           </ul>
         </section>
 

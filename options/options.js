@@ -7,8 +7,11 @@ document.addEventListener("DOMContentLoaded", () => {
     geminiModelPreset: "auto",
     geminiCustomModel: "",
     openaiModelPreset: "recommended",
-    openaiCustomModel: ""
+    openaiCustomModel: "",
+    historyEnabled: false,
+    historyLimit: "10"
   };
+  const replyHistoryStorageKey = "nornDraftReplyHistory";
 
   const form = document.querySelector("#settings-form");
   const apiKeyInput = document.querySelector("#api-key");
@@ -23,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const openaiModelPanel = document.querySelector("#openai-model-panel");
   const openaiModelPresetSelect = document.querySelector("#openai-model-preset");
   const openaiCustomModelInput = document.querySelector("#openai-custom-model");
+  const historyEnabledInput = document.querySelector("#history-enabled");
+  const historyLimitSelect = document.querySelector("#history-limit");
+  const clearHistoryButton = document.querySelector("#clear-history");
   const status = document.querySelector("#status");
 
   const storage = chrome.storage.local;
@@ -121,7 +127,9 @@ document.addEventListener("DOMContentLoaded", () => {
       geminiModelPreset: geminiModelPresetSelect.value,
       geminiCustomModel: geminiCustomModelInput.value.trim(),
       openaiModelPreset: openaiModelPresetSelect.value,
-      openaiCustomModel: openaiCustomModelInput.value.trim()
+      openaiCustomModel: openaiCustomModelInput.value.trim(),
+      historyEnabled: historyEnabledInput.checked,
+      historyLimit: historyLimitSelect.value
     };
   };
 
@@ -138,6 +146,8 @@ document.addEventListener("DOMContentLoaded", () => {
       ? settings.openaiModelPreset
       : defaults.openaiModelPreset;
     openaiCustomModelInput.value = settings.openaiCustomModel;
+    historyEnabledInput.checked = Boolean(settings.historyEnabled);
+    historyLimitSelect.value = settings.historyLimit === "20" ? "20" : defaults.historyLimit;
     syncCustomModelInput();
     syncOpenAiCustomModelInput();
     syncProviderModelSections();
@@ -203,6 +213,15 @@ document.addEventListener("DOMContentLoaded", () => {
       setStatus("Settings reset to defaults.", "success");
     } catch (error) {
       setStatus("Settings could not be reset. Please try again.", "error");
+    }
+  });
+
+  clearHistoryButton.addEventListener("click", async () => {
+    try {
+      await storage.set({ [replyHistoryStorageKey]: [] });
+      setStatus("Reply history cleared.", "success");
+    } catch (error) {
+      setStatus("Reply history could not be cleared. Please try again.", "error");
     }
   });
 

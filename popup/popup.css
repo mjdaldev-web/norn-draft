@@ -75,7 +75,8 @@ body {
 .tone,
 .mode,
 .composer,
-.output {
+.output,
+.history {
   margin-top: 14px;
 }
 
@@ -88,6 +89,82 @@ body {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.3;
+}
+
+.history__details {
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.history__summary {
+  min-height: 38px;
+  padding: 10px 12px;
+  color: #18202f;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.history__summary:focus-visible {
+  outline: 3px solid rgba(26, 115, 232, 0.24);
+  outline-offset: 2px;
+}
+
+.history__body {
+  padding: 0 12px 12px;
+}
+
+.history__list {
+  display: grid;
+  gap: 8px;
+}
+
+.history__empty {
+  margin: 0;
+  color: #526071;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.history-item {
+  padding: 10px;
+  border: 1px solid #e3e8f0;
+  border-radius: 8px;
+  background: #f9fbfd;
+}
+
+.history-item__preview {
+  margin: 0;
+  color: #263244;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.history-item__meta {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.history-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.history-item__actions .button {
+  min-height: 28px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.history__clear {
+  width: 100%;
+  margin-top: 10px;
 }
 
 .tone__chips {

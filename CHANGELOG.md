@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0
+
+- Added optional local reply history, disabled by default.
+- Stored generated replies and basic metadata only when local history is enabled.
+- Added compact popup history with restore, copy, delete, and clear actions.
+- Added Settings controls for enabling local history, choosing a 10 or 20 item limit, and clearing history.
+
 ## 1.3.0
 
 - Added OpenAI provider integration using the OpenAI Responses API.

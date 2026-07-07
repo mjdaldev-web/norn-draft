@@ -80,6 +80,16 @@
         </div>
       </section>
 
+      <section class="history" aria-labelledby="history-title">
+        <details id="history-details" class="history__details">
+          <summary id="history-title" class="history__summary">History</summary>
+          <div class="history__body">
+            <div id="history-list" class="history__list" aria-live="polite"></div>
+            <button id="clear-history" class="button button--secondary history__clear" type="button">Clear History</button>
+          </div>
+        </details>
+      </section>
+
       <p id="status" class="status" role="status" aria-live="polite"></p>
 
       <p class="privacy-note">V1 does not read the current page. Only text you type here is used.</p>
