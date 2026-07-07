@@ -1,12 +1,12 @@
 # Norn Draft Privacy
 
-Norn Draft V1 is designed to stay lightweight and explicit about what it uses.
+Norn Draft V1.3 is designed to stay lightweight and explicit about what it uses.
 
 ## What the Extension Uses
 
 - Text you type or paste into the popup
 - Optional context/details you type into the popup
-- Tone, provider, API key, and reply length settings saved in this browser
+- Tone, provider, model, API key, and reply length settings saved in this browser
 
 ## API Key Storage
 
@@ -26,7 +26,7 @@ Norn Draft does not store a generated-reply history list.
 
 ## External Requests
 
-When Gemini is selected and an API key is saved, Norn Draft sends the text you typed in the popup, selected tones, selected mode, optional context, and reply length guidance to the Gemini API.
+When Gemini or OpenAI is selected and an API key is saved, Norn Draft sends the text you typed in the popup, selected tones, selected mode, optional context, and reply length guidance to the chosen AI provider only after you click **Generate Reply**.
 
 ## No Tracking
 

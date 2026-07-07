@@ -62,6 +62,10 @@ body {
   background: #ffffff;
 }
 
+.settings__panel[hidden] {
+  display: none;
+}
+
 .settings__heading {
   margin-bottom: 14px;
 }

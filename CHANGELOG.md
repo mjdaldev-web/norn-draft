@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- Added OpenAI provider integration using the OpenAI Responses API.
+- Added OpenAI model selection with Recommended, GPT-5.4 mini, GPT-5.5, and Custom model options.
+- Added OpenAI custom model name storage and validation.
+- Kept Gemini model selection unchanged.
+- Updated provider-specific API key, model, quota, and access error handling.
+
 ## 1.2.0
 
 - Added Gemini model selection in Settings.

@@ -4,6 +4,12 @@ document.addEventListener("DOMContentLoaded", () => {
     "flash-lite": "gemini-3.1-flash-lite",
     flash: "gemini-3.5-flash"
   };
+  const OPENAI_MODEL_PRESETS = {
+    recommended: "gpt-5.4-mini",
+    mini: "gpt-5.4-mini",
+    quality: "gpt-5.5"
+  };
+  const OPENAI_RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
   const POPUP_DRAFT_STORAGE_KEY = "nornDraftPopupDraftState";
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
@@ -11,7 +17,9 @@ document.addEventListener("DOMContentLoaded", () => {
     defaultTone: "Professional",
     replyLength: "Balanced",
     geminiModelPreset: "auto",
-    geminiCustomModel: ""
+    geminiCustomModel: "",
+    openaiModelPreset: "recommended",
+    openaiCustomModel: ""
   };
 
   const toneChips = Array.from(document.querySelectorAll(".tone-chip"));
@@ -301,6 +309,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return GEMINI_MODEL_PRESETS[preset] || GEMINI_MODEL_PRESETS.auto;
   };
 
+  const resolveOpenAiModel = (settings) => {
+    const preset = settings.openaiModelPreset || DEFAULT_SETTINGS.openaiModelPreset;
+
+    if (preset === "custom") {
+      return (settings.openaiCustomModel || "").trim();
+    }
+
+    return OPENAI_MODEL_PRESETS[preset] || OPENAI_MODEL_PRESETS.recommended;
+  };
+
   const getGeminiErrorMessage = (statusCode, responseBody, model) => {
     const geminiError = responseBody?.error || {};
     const geminiStatus = typeof geminiError.status === "string" ? geminiError.status : "";
@@ -338,6 +356,30 @@ document.addEventListener("DOMContentLoaded", () => {
       .trim();
   };
 
+  const extractOpenAiReply = (responseBody) => {
+    if (typeof responseBody?.output_text === "string" && responseBody.output_text.trim()) {
+      return responseBody.output_text.trim();
+    }
+
+    const outputItems = Array.isArray(responseBody?.output) ? responseBody.output : [];
+
+    return outputItems
+      .flatMap((item) => Array.isArray(item.content) ? item.content : [])
+      .map((contentItem) => {
+        if (typeof contentItem.text === "string") {
+          return contentItem.text;
+        }
+
+        if (typeof contentItem.output_text === "string") {
+          return contentItem.output_text;
+        }
+
+        return "";
+      })
+      .join("")
+      .trim();
+  };
+
   const safeParseJson = (text) => {
     if (!text) {
       return null;
@@ -350,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const normalizeGeminiErrorMessage = (error, fallbackMessage) => {
+  const getErrorMessage = (error, fallbackMessage) => {
     if (error instanceof Error && typeof error.message === "string" && error.message.trim()) {
       return error.message;
     }
@@ -360,6 +402,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return fallbackMessage;
+  };
+
+  const getOpenAiErrorMessage = (statusCode, responseBody, model) => {
+    const openAiError = responseBody?.error || {};
+    const apiMessage = typeof openAiError.message === "string" ? openAiError.message : "";
+    const errorCode = typeof openAiError.code === "string" ? openAiError.code : "";
+    const errorType = typeof openAiError.type === "string" ? openAiError.type : "";
+
+    if (statusCode === 400) {
+      return `OpenAI request was rejected for ${model}. Check the model name and request format.`;
+    }
+
+    if (statusCode === 401) {
+      return "OpenAI API key issue. Check that your OpenAI API key is valid.";
+    }
+
+    if (statusCode === 403) {
+      return `OpenAI project access issue for ${model}. Check that your API key has access to the selected model.`;
+    }
+
+    if (statusCode === 404 || /not.?found|model/i.test(apiMessage) || /not.?found|model/i.test(errorCode) || /not.?found|model/i.test(errorType)) {
+      return `OpenAI model was not found for ${model}. Check the configured model name.`;
+    }
+
+    if (statusCode === 429 || /quota|rate|limit/i.test(apiMessage) || /quota|rate|limit/i.test(errorCode) || /quota|rate|limit/i.test(errorType)) {
+      return `OpenAI quota/rate limit was reached, or this API project has no available quota for ${model}.`;
+    }
+
+    if (statusCode >= 500) {
+      return `OpenAI service error for ${model}. Try again later.`;
+    }
+
+    return `OpenAI returned an error for ${model}. Try again later.`;
   };
 
   const callGemini = async ({ apiKey, model, prompt }) => {
@@ -424,6 +499,57 @@ document.addEventListener("DOMContentLoaded", () => {
     return reply;
   };
 
+  const callOpenAi = async ({ apiKey, model, prompt }) => {
+    const response = await fetch(OPENAI_RESPONSES_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        input: prompt
+      })
+    });
+
+    const responseText = await response.text().catch(() => "");
+    const responseBody = safeParseJson(responseText) || {};
+
+    if (!response.ok) {
+      const openAiError = responseBody.error || {};
+      const errorCode = typeof openAiError.code === "string" ? openAiError.code : "";
+      const errorType = typeof openAiError.type === "string" ? openAiError.type : "";
+      const apiMessage = typeof openAiError.message === "string" && openAiError.message.trim()
+        ? openAiError.message.trim()
+        : response.statusText || "Unknown error";
+      const warningParts = [`OpenAI generation failed for ${model}`, `HTTP ${response.status}`];
+
+      if (errorCode) {
+        warningParts.push(`code ${errorCode}`);
+      }
+
+      if (errorType) {
+        warningParts.push(`type ${errorType}`);
+      }
+
+      if (apiMessage) {
+        warningParts.push(apiMessage);
+      }
+
+      console.warn(warningParts.join(" - "));
+
+      throw new Error(getOpenAiErrorMessage(response.status, responseBody, model));
+    }
+
+    const reply = extractOpenAiReply(responseBody);
+
+    if (!reply) {
+      throw new Error("OpenAI returned an empty reply. Please try again.");
+    }
+
+    return reply;
+  };
+
   const generateReply = async () => {
     const prompt = promptInput.value.trim();
     const context = contextInput.value.trim();
@@ -439,36 +565,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     await loadSettings();
 
-    if (currentSettings.provider === "OpenAI") {
+    if (currentSettings.provider !== "Gemini" && currentSettings.provider !== "OpenAI") {
       generatedReply = "";
-      setOutput("OpenAI support is not connected yet. Choose Gemini in Settings to generate a reply now.");
-      setStatus("OpenAI support is not connected yet.", "error");
+      setOutput("This AI provider is not supported yet. Choose Gemini or OpenAI in Settings.");
+      setStatus("Unsupported AI provider.", "error");
       saveDraftState();
       return;
     }
 
-    if (currentSettings.provider !== "Gemini") {
+    const isOpenAiProvider = currentSettings.provider === "OpenAI";
+    const selectedModel = isOpenAiProvider
+      ? resolveOpenAiModel(currentSettings)
+      : resolveGeminiModel(currentSettings);
+    const customModelMessage = isOpenAiProvider
+      ? "Please enter a custom OpenAI model name or choose a preset model."
+      : "Please enter a custom Gemini model name or choose a preset model.";
+
+    if (!selectedModel) {
       generatedReply = "";
-      setOutput("This AI provider is not supported yet. Choose Gemini in Settings.");
-      setStatus("Unsupported AI provider.", "error");
+      setOutput(customModelMessage);
+      setStatus(customModelMessage, "validation");
       saveDraftState();
       return;
     }
 
     if (!currentSettings.apiKey) {
       generatedReply = "";
-      setOutput("Please add your API key in Settings first.");
-      setStatus("Please add your API key in Settings first.", "error");
-      saveDraftState();
-      return;
-    }
-
-    const geminiModel = resolveGeminiModel(currentSettings);
-
-    if (!geminiModel) {
-      generatedReply = "";
-      setOutput("Please enter a custom Gemini model name or choose a preset model.");
-      setStatus("Please enter a custom Gemini model name or choose a preset model.", "validation");
+      const missingKeyMessage = isOpenAiProvider
+        ? "Please add your OpenAI API key in Settings first."
+        : "Please add your Gemini API key in Settings first.";
+      setOutput(missingKeyMessage);
+      setStatus(missingKeyMessage, "error");
       saveDraftState();
       return;
     }
@@ -484,21 +611,27 @@ document.addEventListener("DOMContentLoaded", () => {
     generatedReply = "";
     setLoading(true);
     setOutput("Generating your recommended reply...");
-    setStatus("Generating with Gemini...", "success", { persist: true });
+    setStatus(`Generating with ${currentSettings.provider}...`, "success", { persist: true });
     saveDraftState();
 
     try {
-      generatedReply = await callGemini({
-        apiKey: currentSettings.apiKey,
-        model: geminiModel,
-        prompt: aiPrompt
-      });
+      generatedReply = isOpenAiProvider
+        ? await callOpenAi({
+            apiKey: currentSettings.apiKey,
+            model: selectedModel,
+            prompt: aiPrompt
+          })
+        : await callGemini({
+            apiKey: currentSettings.apiKey,
+            model: selectedModel,
+            prompt: aiPrompt
+          });
       setOutput(generatedReply);
       setStatus("Reply generated.", "success");
       await saveDraftState();
     } catch (error) {
       generatedReply = "";
-      const safeMessage = normalizeGeminiErrorMessage(error, "The reply could not be generated. Please try again.");
+      const safeMessage = getErrorMessage(error, "The reply could not be generated. Please try again.");
 
       if (error instanceof TypeError) {
         setOutput("Network connection failed. Check your connection and try again.");

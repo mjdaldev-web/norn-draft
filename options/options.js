@@ -5,7 +5,9 @@ document.addEventListener("DOMContentLoaded", () => {
     defaultTone: "Professional",
     replyLength: "Balanced",
     geminiModelPreset: "auto",
-    geminiCustomModel: ""
+    geminiCustomModel: "",
+    openaiModelPreset: "recommended",
+    openaiCustomModel: ""
   };
 
   const form = document.querySelector("#settings-form");
@@ -15,13 +17,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetSettingsButton = document.querySelector("#reset-settings");
   const defaultToneSelect = document.querySelector("#default-tone");
   const replyLengthSelect = document.querySelector("#reply-length");
+  const geminiModelPanel = document.querySelector("#gemini-model-panel");
   const geminiModelPresetSelect = document.querySelector("#gemini-model-preset");
   const geminiCustomModelInput = document.querySelector("#gemini-custom-model");
+  const openaiModelPanel = document.querySelector("#openai-model-panel");
+  const openaiModelPresetSelect = document.querySelector("#openai-model-preset");
+  const openaiCustomModelInput = document.querySelector("#openai-custom-model");
   const status = document.querySelector("#status");
 
   const storage = chrome.storage.local;
   let statusTimeoutId = null;
   const geminiModelPresets = ["auto", "flash-lite", "flash", "custom"];
+  const openaiModelPresets = ["recommended", "mini", "quality", "custom"];
 
   const clearStatusTimer = () => {
     if (statusTimeoutId) {
@@ -93,6 +100,18 @@ document.addEventListener("DOMContentLoaded", () => {
     geminiCustomModelInput.setAttribute("aria-disabled", String(!isCustomModel));
   };
 
+  const syncOpenAiCustomModelInput = () => {
+    const isCustomModel = openaiModelPresetSelect.value === "custom";
+    openaiCustomModelInput.disabled = !isCustomModel;
+    openaiCustomModelInput.setAttribute("aria-disabled", String(!isCustomModel));
+  };
+
+  const syncProviderModelSections = () => {
+    const isGemini = getSelectedProvider() === "Gemini";
+    geminiModelPanel.hidden = !isGemini;
+    openaiModelPanel.hidden = isGemini;
+  };
+
   const readFormSettings = () => {
     return {
       provider: getSelectedProvider(),
@@ -100,7 +119,9 @@ document.addEventListener("DOMContentLoaded", () => {
       defaultTone: defaultToneSelect.value,
       replyLength: replyLengthSelect.value,
       geminiModelPreset: geminiModelPresetSelect.value,
-      geminiCustomModel: geminiCustomModelInput.value.trim()
+      geminiCustomModel: geminiCustomModelInput.value.trim(),
+      openaiModelPreset: openaiModelPresetSelect.value,
+      openaiCustomModel: openaiCustomModelInput.value.trim()
     };
   };
 
@@ -113,7 +134,13 @@ document.addEventListener("DOMContentLoaded", () => {
       ? settings.geminiModelPreset
       : defaults.geminiModelPreset;
     geminiCustomModelInput.value = settings.geminiCustomModel;
+    openaiModelPresetSelect.value = openaiModelPresets.includes(settings.openaiModelPreset)
+      ? settings.openaiModelPreset
+      : defaults.openaiModelPreset;
+    openaiCustomModelInput.value = settings.openaiCustomModel;
     syncCustomModelInput();
+    syncOpenAiCustomModelInput();
+    syncProviderModelSections();
   };
 
   const loadSettings = async () => {
@@ -134,6 +161,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (settings.geminiModelPreset === "custom" && !settings.geminiCustomModel) {
       setStatus("Please enter a custom Gemini model name or choose a preset model.", "validation");
       geminiCustomModelInput.focus();
+      return;
+    }
+
+    if (settings.openaiModelPreset === "custom" && !settings.openaiCustomModel) {
+      setStatus("Please enter a custom OpenAI model name or choose a preset model.", "validation");
+      openaiCustomModelInput.focus();
       return;
     }
 
@@ -175,6 +208,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   geminiModelPresetSelect.addEventListener("change", () => {
     syncCustomModelInput();
+  });
+
+  openaiModelPresetSelect.addEventListener("change", () => {
+    syncOpenAiCustomModelInput();
+  });
+
+  form.querySelectorAll('input[name="provider"]').forEach((providerInput) => {
+    providerInput.addEventListener("change", () => {
+      syncProviderModelSections();
+    });
   });
 
   loadSettings();
