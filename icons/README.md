@@ -1,9 +1,12 @@
 # Icons
 
-Placeholder folder for extension icons.
+Extension icons are generated from `norn-draft-logo.png`.
 
-Add the required PNG icon sizes here when the artwork is ready:
+Required sizes:
 
 - 16x16
+- 32x32
 - 48x48
 - 128x128
+
+An extra `icon256.png` is also kept for release and portfolio use.

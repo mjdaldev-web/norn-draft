@@ -57,6 +57,10 @@ See [docs/PRIVACY.md](docs/PRIVACY.md) for more detail.
 - `docs/`
 - `icons/`
 
+## Icons
+
+Extension icons are generated from `icons/norn-draft-logo.png` and wired into the manifest at the required sizes.
+
 ## Release Checklist
 
 - Manifest V3 is configured.
