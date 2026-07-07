@@ -1,10 +1,8 @@
 # Documentation
 
-This folder is reserved for project documentation as the extension grows.
+This folder contains project documentation for Norn Draft.
 
-Suggested additions:
+## Documents
 
-- architecture notes
-- feature specifications
-- release notes
-- testing guidance
+- [Privacy](PRIVACY.md)
+- [Release notes](RELEASE_NOTES.md)
