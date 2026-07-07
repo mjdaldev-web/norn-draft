@@ -21,6 +21,10 @@ body {
 }
 
 .popup__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
   padding-bottom: 14px;
   border-bottom: 1px solid #dde4ee;
 }
@@ -41,11 +45,31 @@ body {
   line-height: 1.2;
 }
 
-.popup__header p {
+.popup__header > p {
+  grid-column: 1 / -1;
   margin: 6px 0 0;
   color: #526071;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.icon-button {
+  min-height: 32px;
+  padding: 7px 10px;
+  color: #2459a6;
+  border: 1px solid #c9d7ea;
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  border-color: #9eb7d8;
+  background: #f3f7fd;
 }
 
 .tone,
@@ -93,6 +117,7 @@ body {
 }
 
 .tone-chip:focus-visible,
+.icon-button:focus-visible,
 .button:focus-visible,
 textarea:focus-visible {
   outline: 3px solid rgba(26, 115, 232, 0.24);

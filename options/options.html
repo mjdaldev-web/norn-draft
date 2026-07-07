@@ -9,14 +9,91 @@
   <body>
     <main class="options">
       <header class="options__header">
-        <h1>Norn Draft Settings</h1>
-        <p>Configure extension preferences here when settings are added.</p>
+        <p class="options__eyebrow">Settings</p>
+        <h1>Norn Draft</h1>
+        <p>Choose local defaults for drafting replies later.</p>
       </header>
 
-      <section class="options__panel" aria-labelledby="general-title">
-        <h2 id="general-title">General</h2>
-        <p>No configurable options are available yet.</p>
-      </section>
+      <form id="settings-form" class="settings">
+        <section class="settings__panel" aria-labelledby="provider-title">
+          <div class="settings__heading">
+            <h2 id="provider-title">AI provider</h2>
+            <p>Saved for future API integration.</p>
+          </div>
+
+          <div class="choice-grid" role="radiogroup" aria-label="AI provider">
+            <label class="choice">
+              <input type="radio" name="provider" value="Gemini" checked />
+              <span>Gemini</span>
+            </label>
+            <label class="choice">
+              <input type="radio" name="provider" value="OpenAI" />
+              <span>OpenAI</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="settings__panel" aria-labelledby="api-key-title">
+          <div class="settings__heading">
+            <h2 id="api-key-title">API key</h2>
+            <p>Stored locally in this browser. It is not validated yet.</p>
+          </div>
+
+          <div class="field-row">
+            <label class="field" for="api-key">
+              <span>API key</span>
+              <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Enter your API key later" />
+            </label>
+            <button id="toggle-api-key" class="button button--secondary" type="button">Show</button>
+          </div>
+
+          <button id="clear-api-key" class="button button--secondary button--inline" type="button">Clear API Key</button>
+        </section>
+
+        <section class="settings__panel" aria-labelledby="defaults-title">
+          <div class="settings__heading">
+            <h2 id="defaults-title">Draft defaults</h2>
+            <p>Used by the popup when it opens.</p>
+          </div>
+
+          <label class="field" for="default-tone">
+            <span>Default tone</span>
+            <select id="default-tone" name="defaultTone">
+              <option value="Professional">Professional</option>
+              <option value="Friendly">Friendly</option>
+              <option value="Empathetic">Empathetic</option>
+              <option value="Instructional">Instructional</option>
+              <option value="Short">Short</option>
+              <option value="Detailed">Detailed</option>
+            </select>
+          </label>
+
+          <label class="field" for="reply-length">
+            <span>Default reply length</span>
+            <select id="reply-length" name="replyLength">
+              <option value="Concise">Concise</option>
+              <option value="Balanced">Balanced</option>
+              <option value="Detailed">Detailed</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="settings__panel settings__panel--note" aria-labelledby="privacy-title">
+          <h2 id="privacy-title">Privacy and security</h2>
+          <ul>
+            <li>API key is stored locally in this browser using chrome.storage.local.</li>
+            <li>Norn Draft V1 does not read the current page.</li>
+            <li>Only text the user types into the popup will be used for generation once AI integration is added.</li>
+          </ul>
+        </section>
+
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+
+        <div class="actions">
+          <button class="button button--primary" type="submit">Save Settings</button>
+          <button id="reset-settings" class="button button--secondary" type="button">Reset Settings</button>
+        </div>
+      </form>
     </main>
 
     <script src="options.js"></script>

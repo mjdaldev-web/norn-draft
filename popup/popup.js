@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const promptInput = document.querySelector("#prompt");
   const generateButton = document.querySelector("#generate");
   const copyButton = document.querySelector("#copy");
+  const settingsButton = document.querySelector("#settings");
   const output = document.querySelector("#reply-output");
   const status = document.querySelector("#status");
 
@@ -34,6 +35,20 @@ document.addEventListener("DOMContentLoaded", () => {
     chip.addEventListener("click", () => selectTone(chip));
   });
 
+  const loadDefaultTone = async () => {
+    try {
+      const { defaultTone } = await chrome.storage.local.get({ defaultTone: "Professional" });
+      const savedToneChip = toneChips.find((chip) => chip.dataset.tone === defaultTone);
+
+      if (savedToneChip) {
+        selectTone(savedToneChip);
+        setStatus("");
+      }
+    } catch (error) {
+      setStatus("");
+    }
+  };
+
   generateButton.addEventListener("click", () => {
     const prompt = promptInput.value.trim();
 
@@ -63,4 +78,10 @@ document.addEventListener("DOMContentLoaded", () => {
       setStatus("Clipboard copy was not available. Select the reply text and copy it manually.", "error");
     }
   });
+
+  settingsButton.addEventListener("click", () => {
+    chrome.runtime.openOptionsPage();
+  });
+
+  loadDefaultTone();
 });

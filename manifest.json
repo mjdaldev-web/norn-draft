@@ -7,7 +7,12 @@
     "default_title": "Norn Draft",
     "default_popup": "popup/popup.html"
   },
-  "options_page": "options/options.html",
-  "permissions": [],
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": []
 }
