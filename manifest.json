@@ -14,5 +14,7 @@
   "permissions": [
     "storage"
   ],
-  "host_permissions": []
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ]
 }
