@@ -6,6 +6,7 @@
 - Confirmed provider-specific Gemini and OpenAI API key behavior remains local and separate.
 - Refreshed release documentation for V1.5 features, privacy behavior, history controls, and manual testing.
 - Confirmed permissions remain limited to storage plus Gemini and OpenAI API hosts.
+- Added low-spec readiness notes and capped Settings history rendering/saving to the configured history limit.
 
 ## 1.4.2
 

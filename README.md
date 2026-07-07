@@ -58,6 +58,13 @@ See [docs/PRIVACY.md](docs/PRIVACY.md) for more detail.
 - OpenAI and Gemini availability depends on the user's API key, project access, quota, and selected model.
 - Local history is intentionally limited and does not sync across browsers.
 
+## Low-Spec Readiness
+
+- Norn Draft uses plain HTML, CSS, and JavaScript with no build framework or background processing loop.
+- AI generation runs through the selected provider's API, not on the local device.
+- Local work is limited to small popup/settings interactions, local storage reads/writes, and rendering capped history.
+- Keeping reply history at 10 or 20 items helps preserve responsiveness on older PCs.
+
 ## Project Structure
 
 - `manifest.json`

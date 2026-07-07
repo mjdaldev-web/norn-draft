@@ -50,6 +50,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const validModes = ["Generate Reply", "Rewrite Draft"];
   const validTones = ["Professional", "Friendly", "Empathetic", "Instructional", "Short", "Detailed"];
 
+  const getHistoryLimit = () => {
+    return currentSettings.historyLimit === "20" ? 20 : 10;
+  };
+
   const clearStatusTimer = () => {
     if (statusTimeoutId) {
       window.clearTimeout(statusTimeoutId);
@@ -278,7 +282,8 @@ document.addEventListener("DOMContentLoaded", () => {
         detailLevel: item.detailLevel === "detailed" ? "detailed" : "basic",
         inputText: typeof item.inputText === "string" ? item.inputText : "",
         context: typeof item.context === "string" ? item.context : ""
-      }));
+      }))
+      .slice(0, getHistoryLimit());
   };
 
   const renderHistory = () => {
@@ -350,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const saveReplyHistory = async () => {
-    await storage.set({ [replyHistoryStorageKey]: replyHistory });
+    await storage.set({ [replyHistoryStorageKey]: replyHistory.slice(0, getHistoryLimit()) });
   };
 
   const readFormSettings = () => {
@@ -450,6 +455,8 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       await storage.set(settings);
       currentSettings = { ...defaults, ...settings };
+      replyHistory = replyHistory.slice(0, getHistoryLimit());
+      await saveReplyHistory();
       renderHistory();
       setStatus("Settings saved locally.", "success");
     } catch (error) {

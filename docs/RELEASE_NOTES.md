@@ -50,6 +50,13 @@ Norn Draft V1.5 is the current release-ready browser extension state before crea
 - Provider generation depends on the user's API key, project access, quota, and selected model.
 - Local history and popup draft state stay on this browser only.
 
+## Performance Notes
+
+- Norn Draft uses plain HTML, CSS, and JavaScript with no framework runtime or build-tool bundle.
+- AI generation is handled by the selected provider's API, not by local processing.
+- Local history is capped to the configured 10 or 20 latest replies to keep popup and Settings rendering responsive.
+- Detailed history entries use scrollable text blocks so long saved replies or context do not expand the whole page indefinitely.
+
 ## V1.5 Manual Test Checklist
 
 - Manifest V3 configured
