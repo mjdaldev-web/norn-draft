@@ -1,19 +1,19 @@
 # Norn Draft Privacy
 
-Norn Draft V1.4.1 is designed to stay lightweight and explicit about what it uses.
+Norn Draft V1.4.2 is designed to stay lightweight and explicit about what it uses.
 
 ## What the Extension Uses
 
 - Text you type or paste into the popup
 - Optional context/details you type into the popup
-- Tone, provider, model, API key, and reply length settings saved in this browser
+- Tone, provider, model, provider-specific API key, and reply length settings saved in this browser
 - Optional local reply history if you enable it in Settings
 
 ## API Key Storage
 
-Your API key is stored locally in this browser using `chrome.storage.local`. It is used only when you click **Generate Reply**.
+Gemini and OpenAI API keys are stored separately and locally in this browser using `chrome.storage.local`. The selected provider's key is used only when you click **Generate Reply**.
 
-Norn Draft does not hardcode API keys, commit secrets, or display your API key in popup status messages.
+Norn Draft does not hardcode API keys, commit secrets, or display your API key in popup status messages. API keys are never saved in reply history and are never sent to the other provider.
 
 ## Page Content
 
@@ -31,7 +31,7 @@ Detailed history must be explicitly selected. When enabled, it stores the origin
 
 Local history never stores API keys, raw API responses, page URLs, page titles, browser page content, or clipboard data. Basic history does not store original prompt text or optional context/details.
 
-You can delete individual history items or clear all saved reply history from Settings. Clearing history does not remove your API key or other settings.
+You can delete individual history items or clear all saved reply history from Settings. Clearing history does not remove your API keys or other settings.
 
 ## External Requests
 

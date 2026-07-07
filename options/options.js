@@ -2,6 +2,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const defaults = {
     provider: "Gemini",
     apiKey: "",
+    geminiApiKey: "",
+    openaiApiKey: "",
     defaultTone: "Professional",
     replyLength: "Balanced",
     geminiModelPreset: "auto",
@@ -19,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabButtons = Array.from(document.querySelectorAll("[data-tab]"));
   const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
   const apiKeyInput = document.querySelector("#api-key");
+  const apiKeyLabel = document.querySelector("#api-key-label");
   const toggleApiKeyButton = document.querySelector("#toggle-api-key");
   const clearApiKeyButton = document.querySelector("#clear-api-key");
   const resetSettingsButton = document.querySelector("#reset-settings");
@@ -39,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const storage = chrome.storage.local;
   let statusTimeoutId = null;
   let currentSettings = { ...defaults };
+  let activeProvider = defaults.provider;
   let replyHistory = [];
   const geminiModelPresets = ["auto", "flash-lite", "flash", "custom"];
   const openaiModelPresets = ["recommended", "mini", "quality", "custom"];
@@ -110,6 +114,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const getProviderApiKeySetting = (provider) => {
+    return provider === "OpenAI" ? "openaiApiKey" : "geminiApiKey";
+  };
+
+  const getProviderLabel = (provider) => {
+    return provider === "OpenAI" ? "OpenAI" : "Gemini";
+  };
+
+  const syncCurrentApiKeyToSettings = () => {
+    const keyName = getProviderApiKeySetting(activeProvider);
+    currentSettings[keyName] = apiKeyInput.value.trim();
+  };
+
+  const syncApiKeyField = () => {
+    const provider = getSelectedProvider();
+    const providerLabel = getProviderLabel(provider);
+    const keyName = getProviderApiKeySetting(provider);
+
+    activeProvider = provider;
+    apiKeyLabel.textContent = `${providerLabel} API key`;
+    apiKeyInput.value = currentSettings[keyName] || "";
+    apiKeyInput.placeholder = `Enter your ${providerLabel} API key`;
+    clearApiKeyButton.textContent = `Clear ${providerLabel} API Key`;
+    apiKeyInput.type = "password";
+    toggleApiKeyButton.textContent = "Show";
+  };
+
   const getSelectedHistoryDetailLevel = () => {
     return form.elements.historyDetailLevel.value;
   };
@@ -153,6 +184,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const isGemini = getSelectedProvider() === "Gemini";
     geminiModelPanel.hidden = !isGemini;
     openaiModelPanel.hidden = isGemini;
+  };
+
+  const migrateLegacyApiKey = async (settings) => {
+    const legacyApiKey = typeof settings.apiKey === "string" ? settings.apiKey.trim() : "";
+    const provider = settings.provider === "OpenAI" ? "OpenAI" : "Gemini";
+    const providerKeyName = getProviderApiKeySetting(provider);
+
+    if (!legacyApiKey || settings[providerKeyName]) {
+      return settings;
+    }
+
+    const migratedSettings = {
+      ...settings,
+      [providerKeyName]: legacyApiKey,
+      apiKey: ""
+    };
+
+    // Migrate the old shared key only to the currently selected provider so a
+    // Gemini key is never silently copied into OpenAI, or vice versa.
+    await storage.set({
+      [providerKeyName]: legacyApiKey,
+      apiKey: ""
+    });
+
+    return migratedSettings;
   };
 
   const escapeHtml = (value) => {
@@ -298,9 +354,13 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const readFormSettings = () => {
+    syncCurrentApiKeyToSettings();
+
     return {
       provider: getSelectedProvider(),
-      apiKey: apiKeyInput.value.trim(),
+      apiKey: "",
+      geminiApiKey: currentSettings.geminiApiKey || "",
+      openaiApiKey: currentSettings.openaiApiKey || "",
       defaultTone: defaultToneSelect.value,
       replyLength: replyLengthSelect.value,
       geminiModelPreset: geminiModelPresetSelect.value,
@@ -320,7 +380,6 @@ document.addEventListener("DOMContentLoaded", () => {
       : defaults.historyDetailLevel;
 
     setSelectedProvider(currentSettings.provider);
-    apiKeyInput.value = currentSettings.apiKey;
     defaultToneSelect.value = currentSettings.defaultTone;
     replyLengthSelect.value = currentSettings.replyLength;
     geminiModelPresetSelect.value = geminiModelPresets.includes(currentSettings.geminiModelPreset)
@@ -337,13 +396,15 @@ document.addEventListener("DOMContentLoaded", () => {
     syncCustomModelInput();
     syncOpenAiCustomModelInput();
     syncProviderModelSections();
+    syncApiKeyField();
     renderHistory();
   };
 
   const loadSettings = async () => {
     try {
       const savedSettings = await storage.get(defaults);
-      applySettings({ ...defaults, ...savedSettings });
+      const migratedSettings = await migrateLegacyApiKey({ ...defaults, ...savedSettings });
+      applySettings(migratedSettings);
       setStatus("Settings loaded.", "success");
     } catch (error) {
       applySettings(defaults);
@@ -370,15 +431,16 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const settings = readFormSettings();
+    const isGeminiProvider = settings.provider === "Gemini";
 
-    if (settings.geminiModelPreset === "custom" && !settings.geminiCustomModel) {
+    if (isGeminiProvider && settings.geminiModelPreset === "custom" && !settings.geminiCustomModel) {
       setActiveTab("models");
       setStatus("Please enter a custom Gemini model name or choose a preset model.", "validation");
       geminiCustomModelInput.focus();
       return;
     }
 
-    if (settings.openaiModelPreset === "custom" && !settings.openaiCustomModel) {
+    if (!isGeminiProvider && settings.openaiModelPreset === "custom" && !settings.openaiCustomModel) {
       setActiveTab("models");
       setStatus("Please enter a custom OpenAI model name or choose a preset model.", "validation");
       openaiCustomModelInput.focus();
@@ -402,14 +464,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   clearApiKeyButton.addEventListener("click", async () => {
+    const provider = getSelectedProvider();
+    const providerLabel = getProviderLabel(provider);
+    const keyName = getProviderApiKeySetting(provider);
     apiKeyInput.value = "";
 
     try {
-      await storage.set({ apiKey: "" });
+      await storage.set({ [keyName]: "", apiKey: "" });
+      currentSettings[keyName] = "";
       currentSettings.apiKey = "";
-      setStatus("API key cleared from local storage.", "success");
+      setStatus(`${providerLabel} API key cleared from local storage.`, "success");
     } catch (error) {
-      setStatus("API key could not be cleared. Please try again.", "error");
+      setStatus(`${providerLabel} API key could not be cleared. Please try again.`, "error");
     }
   });
 
@@ -495,7 +561,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   form.querySelectorAll('input[name="provider"]').forEach((providerInput) => {
     providerInput.addEventListener("change", () => {
+      syncCurrentApiKeyToSettings();
+      currentSettings.provider = getSelectedProvider();
       syncProviderModelSections();
+      syncApiKeyField();
     });
   });
 

@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
     apiKey: "",
+    geminiApiKey: "",
+    openaiApiKey: "",
     defaultTone: "Professional",
     replyLength: "Balanced",
     geminiModelPreset: "auto",
@@ -348,10 +350,44 @@ document.addEventListener("DOMContentLoaded", () => {
   const loadSettings = async () => {
     try {
       const savedSettings = await chrome.storage.local.get(DEFAULT_SETTINGS);
-      currentSettings = { ...DEFAULT_SETTINGS, ...savedSettings };
+      currentSettings = await migrateLegacyApiKey({ ...DEFAULT_SETTINGS, ...savedSettings });
     } catch (error) {
       currentSettings = { ...DEFAULT_SETTINGS };
     }
+  };
+
+  const getProviderApiKeySetting = (provider) => {
+    return provider === "OpenAI" ? "openaiApiKey" : "geminiApiKey";
+  };
+
+  const getProviderApiKey = (settings) => {
+    const keyName = getProviderApiKeySetting(settings.provider);
+    return typeof settings[keyName] === "string" ? settings[keyName].trim() : "";
+  };
+
+  const migrateLegacyApiKey = async (settings) => {
+    const legacyApiKey = typeof settings.apiKey === "string" ? settings.apiKey.trim() : "";
+    const provider = settings.provider === "OpenAI" ? "OpenAI" : "Gemini";
+    const providerKeyName = getProviderApiKeySetting(provider);
+
+    if (!legacyApiKey || settings[providerKeyName]) {
+      return settings;
+    }
+
+    const migratedSettings = {
+      ...settings,
+      [providerKeyName]: legacyApiKey,
+      apiKey: ""
+    };
+
+    // Migrate the old shared key only to the selected provider. This avoids
+    // silently using a Gemini key for OpenAI, or an OpenAI key for Gemini.
+    await chrome.storage.local.set({
+      [providerKeyName]: legacyApiKey,
+      apiKey: ""
+    });
+
+    return migratedSettings;
   };
 
   const loadReplyHistory = async () => {
@@ -726,7 +762,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (!currentSettings.apiKey) {
+    const providerApiKey = getProviderApiKey(currentSettings);
+
+    if (!providerApiKey) {
       generatedReply = "";
       const missingKeyMessage = isOpenAiProvider
         ? "Please add your OpenAI API key in Settings first."
@@ -754,12 +792,12 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const generationResult = isOpenAiProvider
         ? await callOpenAi({
-            apiKey: currentSettings.apiKey,
+            apiKey: providerApiKey,
             model: selectedModel,
             prompt: aiPrompt
           })
         : await callGemini({
-            apiKey: currentSettings.apiKey,
+            apiKey: providerApiKey,
             model: selectedModel,
             prompt: aiPrompt
           });

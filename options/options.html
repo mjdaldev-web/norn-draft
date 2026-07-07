@@ -23,41 +23,6 @@
         </div>
 
         <div id="panel-general" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-general" data-tab-panel="general">
-          <section class="settings__panel" aria-labelledby="provider-title">
-            <div class="settings__heading">
-              <h2 id="provider-title">AI provider</h2>
-              <p>Choose which provider Norn Draft uses when generating replies.</p>
-            </div>
-
-            <div class="choice-grid" role="radiogroup" aria-label="AI provider">
-              <label class="choice">
-                <input type="radio" name="provider" value="Gemini" checked />
-                <span>Gemini</span>
-              </label>
-              <label class="choice">
-                <input type="radio" name="provider" value="OpenAI" />
-                <span>OpenAI</span>
-              </label>
-            </div>
-          </section>
-
-          <section class="settings__panel" aria-labelledby="api-key-title">
-            <div class="settings__heading">
-              <h2 id="api-key-title">API key</h2>
-              <p>Stored locally in this browser for the selected provider. It is not validated here.</p>
-            </div>
-
-            <div class="field-row">
-              <label class="field" for="api-key">
-                <span>API key</span>
-                <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Enter your API key later" />
-              </label>
-              <button id="toggle-api-key" class="button button--secondary" type="button">Show</button>
-            </div>
-
-            <button id="clear-api-key" class="button button--secondary button--inline" type="button">Clear API Key</button>
-          </section>
-
           <section class="settings__panel" aria-labelledby="defaults-title">
             <div class="settings__heading">
               <h2 id="defaults-title">Draft defaults</h2>
@@ -88,6 +53,41 @@
         </div>
 
         <div id="panel-models" class="tab-panel" role="tabpanel" aria-labelledby="tab-models" data-tab-panel="models" hidden>
+          <section class="settings__panel" aria-labelledby="provider-title">
+            <div class="settings__heading">
+              <h2 id="provider-title">AI provider</h2>
+              <p>Choose the provider and local API key Norn Draft uses when generating replies.</p>
+            </div>
+
+            <div class="choice-grid" role="radiogroup" aria-label="AI provider">
+              <label class="choice">
+                <input type="radio" name="provider" value="Gemini" checked />
+                <span>Gemini</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="provider" value="OpenAI" />
+                <span>OpenAI</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="settings__panel" aria-labelledby="api-key-title">
+            <div class="settings__heading">
+              <h2 id="api-key-title">Provider API key</h2>
+              <p>Gemini and OpenAI keys are stored separately in this browser. The key is not validated here.</p>
+            </div>
+
+            <div class="field-row">
+              <label class="field" for="api-key">
+                <span id="api-key-label">Gemini API key</span>
+                <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Enter your Gemini API key" />
+              </label>
+              <button id="toggle-api-key" class="button button--secondary" type="button">Show</button>
+            </div>
+
+            <button id="clear-api-key" class="button button--secondary button--inline" type="button">Clear Gemini API Key</button>
+          </section>
+
           <section id="gemini-model-panel" class="settings__panel" aria-labelledby="gemini-model-title">
             <div class="settings__heading">
               <h2 id="gemini-model-title">Gemini model</h2>
@@ -197,8 +197,9 @@
           <section class="settings__panel settings__panel--note" aria-labelledby="privacy-title">
             <h2 id="privacy-title">Privacy and security</h2>
             <ul>
-              <li>API key is stored locally in this browser using chrome.storage.local.</li>
-              <li>Norn Draft V1.4.1 does not read the current page.</li>
+              <li>Gemini and OpenAI API keys are stored separately and locally in this browser using chrome.storage.local.</li>
+              <li>API keys are never saved in reply history and are never sent to the other provider.</li>
+              <li>Norn Draft V1.4.2 does not read the current page.</li>
               <li>Only popup text, selected tones, mode, and optional context are sent to the chosen provider when generating.</li>
               <li>Local reply history is off by default and stored locally only when enabled.</li>
               <li>Basic history saves generated replies and metadata only.</li>

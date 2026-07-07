@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.2
+
+- Moved AI provider and API key settings into the AI Models tab.
+- Added separate local storage for Gemini and OpenAI API keys.
+- Added provider-specific API key labels, placeholders, and clear behavior.
+- Improved provider switching so saved keys remain available when switching back.
+- Updated privacy wording for separate local API key storage.
+
 ## 1.4.1
 
 - Added a tabbed Settings page with General, AI Models, History, and Privacy sections.
