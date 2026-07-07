@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1
+
+- Added a tabbed Settings page with General, AI Models, History, and Privacy sections.
+- Added Basic and Detailed local history storage modes.
+- Added a detailed history privacy warning before storing original messages or context.
+- Added a detailed Settings history manager with copy, restore, delete, and clear actions.
+- Updated privacy documentation for detailed history controls.
+
 ## 1.4.0
 
 - Added optional local reply history, disabled by default.

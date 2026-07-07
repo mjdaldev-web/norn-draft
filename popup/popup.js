@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     openaiModelPreset: "recommended",
     openaiCustomModel: "",
     historyEnabled: false,
+    historyDetailLevel: "basic",
     historyLimit: "10"
   };
 
@@ -174,7 +175,10 @@ document.addEventListener("DOMContentLoaded", () => {
         mode: validModes.includes(item.mode) ? item.mode : "Generate Reply",
         tones: sanitizeTones(item.tones),
         replyLength: typeof item.replyLength === "string" ? item.replyLength : DEFAULT_SETTINGS.replyLength,
-        timestamp: typeof item.timestamp === "string" ? item.timestamp : new Date().toISOString()
+        timestamp: typeof item.timestamp === "string" ? item.timestamp : new Date().toISOString(),
+        detailLevel: item.detailLevel === "detailed" ? "detailed" : "basic",
+        inputText: typeof item.inputText === "string" ? item.inputText : "",
+        context: typeof item.context === "string" ? item.context : ""
       }))
       .slice(0, getHistoryLimit());
   };
@@ -361,11 +365,12 @@ document.addEventListener("DOMContentLoaded", () => {
     renderHistory();
   };
 
-  const addReplyToHistory = async ({ reply, provider, model, mode, tones, replyLength }) => {
+  const addReplyToHistory = async ({ reply, provider, model, mode, tones, replyLength, inputText, context }) => {
     if (!currentSettings.historyEnabled || !reply.trim()) {
       return true;
     }
 
+    const detailLevel = currentSettings.historyDetailLevel === "detailed" ? "detailed" : "basic";
     const item = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       reply,
@@ -374,8 +379,14 @@ document.addEventListener("DOMContentLoaded", () => {
       mode,
       tones,
       replyLength,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      detailLevel
     };
+
+    if (detailLevel === "detailed") {
+      item.inputText = inputText;
+      item.context = context;
+    }
 
     replyHistory = [item, ...replyHistory].slice(0, getHistoryLimit());
 
@@ -768,7 +779,9 @@ document.addEventListener("DOMContentLoaded", () => {
         model: selectedModel,
         mode: selectedMode,
         tones: getSelectedTones(),
-        replyLength: currentSettings.replyLength
+        replyLength: currentSettings.replyLength,
+        inputText: prompt,
+        context
       });
       setStatus(
         historySaved ? "Reply generated." : "Reply generated, but history could not be saved.",

@@ -39,8 +39,9 @@ Norn Draft uses the saved API key only when you click **Generate Reply** in the 
 - Only text you type into the popup, selected tones, selected mode, optional context, and reply length guidance are sent to the chosen AI provider for generation.
 - Your API key is stored locally in this browser using `chrome.storage.local`.
 - In-progress popup draft state, including the current generated reply, is stored locally so closing the popup does not lose your work.
-- Optional local reply history is disabled by default. When enabled, it stores generated replies and basic metadata only.
-- Original prompt text, optional context, API keys, raw API responses, page URLs, and page content are not saved in history.
+- Optional local reply history is disabled by default. Basic history stores generated replies and basic metadata only.
+- Detailed history can be explicitly enabled to store the original message/draft and optional context locally with the generated reply.
+- API keys, raw API responses, page URLs, page content, clipboard data, and browser page content are never saved in history.
 - Norn Draft does not include analytics, tracking, ads, external scripts, or automatic clipboard/page reading.
 
 See [docs/PRIVACY.md](docs/PRIVACY.md) for more detail.

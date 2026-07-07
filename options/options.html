@@ -15,156 +15,198 @@
       </header>
 
       <form id="settings-form" class="settings">
-        <section class="settings__panel" aria-labelledby="provider-title">
-          <div class="settings__heading">
-            <h2 id="provider-title">AI provider</h2>
-            <p>Choose which provider Norn Draft uses when generating replies.</p>
-          </div>
+        <div class="tabs" role="tablist" aria-label="Settings sections">
+          <button id="tab-general" class="tab is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-general" data-tab="general">General</button>
+          <button id="tab-models" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-models" data-tab="models">AI Models</button>
+          <button id="tab-history" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-history" data-tab="history">History</button>
+          <button id="tab-privacy" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-privacy" data-tab="privacy">Privacy</button>
+        </div>
 
-          <div class="choice-grid" role="radiogroup" aria-label="AI provider">
-            <label class="choice">
-              <input type="radio" name="provider" value="Gemini" checked />
-              <span>Gemini</span>
+        <div id="panel-general" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-general" data-tab-panel="general">
+          <section class="settings__panel" aria-labelledby="provider-title">
+            <div class="settings__heading">
+              <h2 id="provider-title">AI provider</h2>
+              <p>Choose which provider Norn Draft uses when generating replies.</p>
+            </div>
+
+            <div class="choice-grid" role="radiogroup" aria-label="AI provider">
+              <label class="choice">
+                <input type="radio" name="provider" value="Gemini" checked />
+                <span>Gemini</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="provider" value="OpenAI" />
+                <span>OpenAI</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="settings__panel" aria-labelledby="api-key-title">
+            <div class="settings__heading">
+              <h2 id="api-key-title">API key</h2>
+              <p>Stored locally in this browser for the selected provider. It is not validated here.</p>
+            </div>
+
+            <div class="field-row">
+              <label class="field" for="api-key">
+                <span>API key</span>
+                <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Enter your API key later" />
+              </label>
+              <button id="toggle-api-key" class="button button--secondary" type="button">Show</button>
+            </div>
+
+            <button id="clear-api-key" class="button button--secondary button--inline" type="button">Clear API Key</button>
+          </section>
+
+          <section class="settings__panel" aria-labelledby="defaults-title">
+            <div class="settings__heading">
+              <h2 id="defaults-title">Draft defaults</h2>
+              <p>Used by the popup when it opens.</p>
+            </div>
+
+            <label class="field" for="default-tone">
+              <span>Default tone</span>
+              <select id="default-tone" name="defaultTone">
+                <option value="Professional">Professional</option>
+                <option value="Friendly">Friendly</option>
+                <option value="Empathetic">Empathetic</option>
+                <option value="Instructional">Instructional</option>
+                <option value="Short">Short</option>
+                <option value="Detailed">Detailed</option>
+              </select>
             </label>
-            <label class="choice">
-              <input type="radio" name="provider" value="OpenAI" />
-              <span>OpenAI</span>
+
+            <label class="field" for="reply-length">
+              <span>Default reply length</span>
+              <select id="reply-length" name="replyLength">
+                <option value="Concise">Concise</option>
+                <option value="Balanced">Balanced</option>
+                <option value="Detailed">Detailed</option>
+              </select>
             </label>
-          </div>
-        </section>
+          </section>
+        </div>
 
-        <section class="settings__panel" aria-labelledby="api-key-title">
-          <div class="settings__heading">
-            <h2 id="api-key-title">API key</h2>
-            <p>Stored locally in this browser for the selected provider. It is not validated here.</p>
-          </div>
+        <div id="panel-models" class="tab-panel" role="tabpanel" aria-labelledby="tab-models" data-tab-panel="models" hidden>
+          <section id="gemini-model-panel" class="settings__panel" aria-labelledby="gemini-model-title">
+            <div class="settings__heading">
+              <h2 id="gemini-model-title">Gemini model</h2>
+              <p>Applies when Gemini is selected as the AI provider.</p>
+            </div>
 
-          <div class="field-row">
-            <label class="field" for="api-key">
-              <span>API key</span>
-              <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="Enter your API key later" />
+            <label class="field" for="gemini-model-preset">
+              <span>Model</span>
+              <select id="gemini-model-preset" name="geminiModelPreset">
+                <option value="auto">Auto / Recommended</option>
+                <option value="flash-lite">Gemini 3.1 Flash-Lite</option>
+                <option value="flash">Gemini 3.5 Flash</option>
+                <option value="custom">Custom model name</option>
+              </select>
             </label>
-            <button id="toggle-api-key" class="button button--secondary" type="button">Show</button>
-          </div>
 
-          <button id="clear-api-key" class="button button--secondary button--inline" type="button">Clear API Key</button>
-        </section>
+            <label class="field field--custom-model" for="gemini-custom-model">
+              <span>Custom model name</span>
+              <input id="gemini-custom-model" name="geminiCustomModel" type="text" autocomplete="off" placeholder="gemini-3.5-flash" />
+            </label>
 
-        <section id="gemini-model-panel" class="settings__panel" aria-labelledby="gemini-model-title">
-          <div class="settings__heading">
-            <h2 id="gemini-model-title">Gemini model</h2>
-            <p>Applies when Gemini is selected as the AI provider.</p>
-          </div>
+            <p class="field-help">
+              Recommended uses Gemini 3.5 Flash. Flash-Lite is faster/lighter. Pro models may require special API access. If your API project has access to a Pro model, use Custom model name.
+            </p>
+          </section>
 
-          <label class="field" for="gemini-model-preset">
-            <span>Model</span>
-            <select id="gemini-model-preset" name="geminiModelPreset">
-              <option value="auto">Auto / Recommended</option>
-              <option value="flash-lite">Gemini 3.1 Flash-Lite</option>
-              <option value="flash">Gemini 3.5 Flash</option>
-              <option value="custom">Custom model name</option>
-            </select>
-          </label>
+          <section id="openai-model-panel" class="settings__panel" aria-labelledby="openai-model-title" hidden>
+            <div class="settings__heading">
+              <h2 id="openai-model-title">OpenAI model</h2>
+              <p>Applies when OpenAI is selected as the AI provider.</p>
+            </div>
 
-          <label class="field field--custom-model" for="gemini-custom-model">
-            <span>Custom model name</span>
-            <input id="gemini-custom-model" name="geminiCustomModel" type="text" autocomplete="off" placeholder="gemini-3.5-flash" />
-          </label>
+            <label class="field" for="openai-model-preset">
+              <span>Model</span>
+              <select id="openai-model-preset" name="openaiModelPreset">
+                <option value="recommended">Recommended</option>
+                <option value="mini">GPT-5.4 mini / cost-friendly</option>
+                <option value="quality">GPT-5.5 / higher quality</option>
+                <option value="custom">Custom model name</option>
+              </select>
+            </label>
 
-          <p class="field-help">
-            Recommended uses Gemini 3.5 Flash. Flash-Lite is faster/lighter. Pro models may require special API access. If your API project has access to a Pro model, use Custom model name.
-          </p>
-        </section>
+            <label class="field field--custom-model" for="openai-custom-model">
+              <span>Custom model name</span>
+              <input id="openai-custom-model" name="openaiCustomModel" type="text" autocomplete="off" placeholder="gpt-5.4-mini" />
+            </label>
 
-        <section id="openai-model-panel" class="settings__panel" aria-labelledby="openai-model-title" hidden>
-          <div class="settings__heading">
-            <h2 id="openai-model-title">OpenAI model</h2>
-            <p>Applies when OpenAI is selected as the AI provider.</p>
-          </div>
+            <p class="field-help">
+              Recommended uses the default OpenAI model selected for Norn Draft. Mini is more cost-friendly. GPT-5.5 may cost more or require access. Custom is for advanced users.
+            </p>
+          </section>
+        </div>
 
-          <label class="field" for="openai-model-preset">
-            <span>Model</span>
-            <select id="openai-model-preset" name="openaiModelPreset">
-              <option value="recommended">Recommended</option>
-              <option value="mini">GPT-5.4 mini / cost-friendly</option>
-              <option value="quality">GPT-5.5 / higher quality</option>
-              <option value="custom">Custom model name</option>
-            </select>
-          </label>
+        <div id="panel-history" class="tab-panel" role="tabpanel" aria-labelledby="tab-history" data-tab-panel="history" hidden>
+          <section class="settings__panel" aria-labelledby="history-title">
+            <div class="settings__heading">
+              <h2 id="history-title">Local reply history</h2>
+              <p>Optional and off by default. Saved replies stay in this browser only.</p>
+            </div>
 
-          <label class="field field--custom-model" for="openai-custom-model">
-            <span>Custom model name</span>
-            <input id="openai-custom-model" name="openaiCustomModel" type="text" autocomplete="off" placeholder="gpt-5.4-mini" />
-          </label>
+            <label class="toggle-row" for="history-enabled">
+              <input id="history-enabled" name="historyEnabled" type="checkbox" />
+              <span>Enable local reply history</span>
+            </label>
 
-          <p class="field-help">
-            Recommended uses the default OpenAI model selected for Norn Draft. Mini is more cost-friendly. GPT-5.5 may cost more or require access. Custom is for advanced users.
-          </p>
-        </section>
+            <div class="settings__subgroup" role="radiogroup" aria-labelledby="history-detail-title">
+              <h3 id="history-detail-title">History detail level</h3>
+              <label class="choice">
+                <input type="radio" name="historyDetailLevel" value="basic" checked />
+                <span>Basic history</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="historyDetailLevel" value="detailed" />
+                <span>Detailed history</span>
+              </label>
+            </div>
 
-        <section class="settings__panel" aria-labelledby="defaults-title">
-          <div class="settings__heading">
-            <h2 id="defaults-title">Draft defaults</h2>
-            <p>Used by the popup when it opens.</p>
-          </div>
+            <p class="warning-note">
+              Detailed history saves your original message/draft and optional context locally in this browser. This may include sensitive details such as names, dates, case numbers, or customer information. Enable only if you are comfortable storing this locally. API keys are never saved in history.
+            </p>
 
-          <label class="field" for="default-tone">
-            <span>Default tone</span>
-            <select id="default-tone" name="defaultTone">
-              <option value="Professional">Professional</option>
-              <option value="Friendly">Friendly</option>
-              <option value="Empathetic">Empathetic</option>
-              <option value="Instructional">Instructional</option>
-              <option value="Short">Short</option>
-              <option value="Detailed">Detailed</option>
-            </select>
-          </label>
+            <label class="field history-limit" for="history-limit">
+              <span>History limit</span>
+              <select id="history-limit" name="historyLimit">
+                <option value="10">Latest 10 replies</option>
+                <option value="20">Latest 20 replies</option>
+              </select>
+            </label>
 
-          <label class="field" for="reply-length">
-            <span>Default reply length</span>
-            <select id="reply-length" name="replyLength">
-              <option value="Concise">Concise</option>
-              <option value="Balanced">Balanced</option>
-              <option value="Detailed">Detailed</option>
-            </select>
-          </label>
-        </section>
+            <p class="field-help">
+              Basic history saves generated replies and basic metadata only. Detailed history also saves the message/draft and optional context you typed.
+            </p>
+          </section>
 
-        <section class="settings__panel" aria-labelledby="history-title">
-          <div class="settings__heading">
-            <h2 id="history-title">Local reply history</h2>
-            <p>Optional and off by default. Saved replies stay in this browser only.</p>
-          </div>
+          <section class="settings__panel" aria-labelledby="history-manager-title">
+            <div class="settings__heading">
+              <h2 id="history-manager-title">Saved replies</h2>
+              <p>Review, restore, copy, delete, or clear locally saved replies.</p>
+            </div>
 
-          <label class="toggle-row" for="history-enabled">
-            <input id="history-enabled" name="historyEnabled" type="checkbox" />
-            <span>Enable local reply history</span>
-          </label>
+            <div id="options-history-list" class="history-manager" aria-live="polite"></div>
+            <button id="clear-history" class="button button--secondary button--inline" type="button">Clear Reply History</button>
+          </section>
+        </div>
 
-          <label class="field history-limit" for="history-limit">
-            <span>History limit</span>
-            <select id="history-limit" name="historyLimit">
-              <option value="10">Latest 10 replies</option>
-              <option value="20">Latest 20 replies</option>
-            </select>
-          </label>
-
-          <p class="field-help">
-            Local history saves generated replies and basic metadata only. Your original prompt, optional context, and API key are never saved in history.
-          </p>
-
-          <button id="clear-history" class="button button--secondary button--inline" type="button">Clear Reply History</button>
-        </section>
-
-        <section class="settings__panel settings__panel--note" aria-labelledby="privacy-title">
-          <h2 id="privacy-title">Privacy and security</h2>
-          <ul>
-            <li>API key is stored locally in this browser using chrome.storage.local.</li>
-            <li>Norn Draft V1.4 does not read the current page.</li>
-            <li>Only popup text, selected tones, mode, and optional context are sent to the chosen provider when generating.</li>
-            <li>Local reply history is off by default and stores only generated replies plus basic metadata when enabled.</li>
-          </ul>
-        </section>
+        <div id="panel-privacy" class="tab-panel" role="tabpanel" aria-labelledby="tab-privacy" data-tab-panel="privacy" hidden>
+          <section class="settings__panel settings__panel--note" aria-labelledby="privacy-title">
+            <h2 id="privacy-title">Privacy and security</h2>
+            <ul>
+              <li>API key is stored locally in this browser using chrome.storage.local.</li>
+              <li>Norn Draft V1.4.1 does not read the current page.</li>
+              <li>Only popup text, selected tones, mode, and optional context are sent to the chosen provider when generating.</li>
+              <li>Local reply history is off by default and stored locally only when enabled.</li>
+              <li>Basic history saves generated replies and metadata only.</li>
+              <li>Detailed history also saves the original message/draft and optional context locally if you explicitly select it.</li>
+              <li>API keys, raw API responses, page URLs, page titles, clipboard data, and browser page content are never saved in history.</li>
+            </ul>
+          </section>
+        </div>
 
         <p id="status" class="status" role="status" aria-live="polite"></p>
 
