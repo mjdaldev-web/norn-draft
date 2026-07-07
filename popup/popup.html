@@ -43,9 +43,27 @@
         </div>
       </section>
 
+      <section class="mode" aria-labelledby="mode-title">
+        <h2 id="mode-title">Mode</h2>
+        <div class="mode__selector" role="radiogroup" aria-label="Reply mode">
+          <button class="mode-option is-selected" type="button" role="radio" aria-checked="true" data-mode="Generate Reply">
+            Generate Reply
+          </button>
+          <button class="mode-option" type="button" role="radio" aria-checked="false" data-mode="Rewrite Draft">
+            Rewrite Draft
+          </button>
+        </div>
+      </section>
+
       <section class="composer" aria-labelledby="prompt-title">
-        <label id="prompt-title" for="prompt">Message or question</label>
+        <label id="prompt-title" for="prompt">Message to reply to</label>
+        <p id="prompt-help" class="field-help">Paste the message, question, email, or comment you received.</p>
         <textarea id="prompt" rows="5" placeholder="Paste or type what you want to reply to."></textarea>
+        <label class="context-label" for="context">Context / details, optional</label>
+        <p id="context-help" class="field-help field-help--secondary">
+          Add important details Norn Draft should consider, such as dates, names, case numbers, deadlines, preferred outcome, or background information.
+        </p>
+        <textarea id="context" class="context-input" rows="3" placeholder="Add brief context if helpful."></textarea>
         <button id="generate" class="button button--primary" type="button">Generate Reply</button>
       </section>
 

@@ -1,6 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   const toneChips = Array.from(document.querySelectorAll(".tone-chip"));
+  const modeOptions = Array.from(document.querySelectorAll(".mode-option"));
+  const promptLabel = document.querySelector("#prompt-title");
+  const promptHelp = document.querySelector("#prompt-help");
   const promptInput = document.querySelector("#prompt");
+  const contextInput = document.querySelector("#context");
   const generateButton = document.querySelector("#generate");
   const copyButton = document.querySelector("#copy");
   const settingsButton = document.querySelector("#settings");
@@ -8,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const status = document.querySelector("#status");
 
   let selectedTones = ["Professional"];
+  let selectedMode = "Generate Reply";
   let generatedReply = "";
 
   const setStatus = (message, type) => {
@@ -49,6 +54,34 @@ document.addEventListener("DOMContentLoaded", () => {
     setStatus(`Selected tones: ${selectedTones.join(", ")}.`, "success");
   };
 
+  const syncModeOptions = () => {
+    modeOptions.forEach((option) => {
+      const isSelected = option.dataset.mode === selectedMode;
+      option.classList.toggle("is-selected", isSelected);
+      option.setAttribute("aria-checked", String(isSelected));
+    });
+  };
+
+  const updateModeCopy = () => {
+    if (selectedMode === "Rewrite Draft") {
+      promptLabel.textContent = "Your draft reply";
+      promptHelp.textContent = "Paste your existing reply and choose the tone to rewrite it.";
+      promptInput.placeholder = "Paste the reply you already drafted.";
+      return;
+    }
+
+    promptLabel.textContent = "Message to reply to";
+    promptHelp.textContent = "Paste the message, question, email, or comment you received.";
+    promptInput.placeholder = "Paste or type what you want to reply to.";
+  };
+
+  const selectMode = (selectedOption) => {
+    selectedMode = selectedOption.dataset.mode;
+    syncModeOptions();
+    updateModeCopy();
+    setStatus(`${selectedMode} mode selected.`, "success");
+  };
+
   const loadDefaultTone = async () => {
     try {
       const { defaultTone } = await chrome.storage.local.get({ defaultTone: "Professional" });
@@ -65,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   generateButton.addEventListener("click", () => {
     const prompt = promptInput.value.trim();
+    const context = contextInput.value.trim();
 
     if (!prompt) {
       generatedReply = "";
@@ -74,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    generatedReply = `AI integration is not connected yet.\n\nSelected tones: ${selectedTones.join(", ")}.\n\nWhen API support is added, Norn Draft will use the text you typed here to draft a polished reply with these tone choices.`;
+    generatedReply = `AI integration is not connected yet.\n\nMode: ${selectedMode}.\nSelected tones: ${selectedTones.join(", ")}.\nContext provided: ${context ? "Yes" : "No"}.`;
     output.textContent = generatedReply;
     setStatus("Placeholder reply generated locally.", "success");
   });
@@ -101,6 +135,12 @@ document.addEventListener("DOMContentLoaded", () => {
     chip.addEventListener("click", () => toggleTone(chip));
   });
 
+  modeOptions.forEach((option) => {
+    option.addEventListener("click", () => selectMode(option));
+  });
+
   syncToneChips();
+  syncModeOptions();
+  updateModeCopy();
   loadDefaultTone();
 });
