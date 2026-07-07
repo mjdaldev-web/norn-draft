@@ -165,25 +165,32 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const getGeminiErrorMessage = (statusCode, responseBody) => {
-    const apiMessage = responseBody?.error?.message || "";
+    const geminiError = responseBody?.error || {};
+    const geminiStatus = typeof geminiError.status === "string" ? geminiError.status : "";
+    const geminiCode = typeof geminiError.code === "number" ? geminiError.code : null;
+    const apiMessage = typeof geminiError.message === "string" ? geminiError.message : "";
 
     if (statusCode === 400) {
-      return "Gemini could not process that request. Check your settings and try again.";
+      return `Gemini request was rejected for ${GEMINI_MODEL}. Check the model name and request format.`;
     }
 
     if (statusCode === 401 || statusCode === 403) {
-      return "Gemini rejected the API key. Please check it in Settings.";
+      return `Gemini API key or project access issue for ${GEMINI_MODEL}. Check that the Gemini API key is valid and has access.`;
     }
 
-    if (statusCode === 429 || /quota|rate/i.test(apiMessage)) {
-      return "Gemini rate limit or quota was reached. Please try again later.";
+    if (statusCode === 404 || /not.?found|model/i.test(apiMessage) || /not.?found|model/i.test(geminiStatus)) {
+      return `Gemini model was not found for ${GEMINI_MODEL}. Check the configured model name.`;
+    }
+
+    if (statusCode === 429 || /quota|rate/i.test(apiMessage) || /quota|rate/i.test(geminiStatus)) {
+      return `Gemini quota/rate limit was reached, or this API project has no available quota for ${GEMINI_MODEL}.`;
     }
 
     if (statusCode >= 500) {
-      return "Gemini is having trouble right now. Please try again shortly.";
+      return `Gemini service error for ${GEMINI_MODEL}. Try again later.`;
     }
 
-    return "Gemini returned an error. Please try again.";
+    return `Gemini returned an error for ${GEMINI_MODEL}. Try again later.`;
   };
 
   const extractGeminiReply = (responseBody) => {
@@ -192,6 +199,18 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((part) => part.text || "")
       .join("")
       .trim();
+  };
+
+  const safeParseJson = (text) => {
+    if (!text) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      return null;
+    }
   };
 
   const callGemini = async ({ apiKey, prompt }) => {
@@ -217,9 +236,19 @@ document.addEventListener("DOMContentLoaded", () => {
       })
     });
 
-    const responseBody = await response.json().catch(() => ({}));
+    const responseText = await response.text().catch(() => "");
+    const responseBody = safeParseJson(responseText) || {};
 
     if (!response.ok) {
+      const geminiError = responseBody.error || {};
+      console.warn("Gemini generation failed", {
+        model: GEMINI_MODEL,
+        httpStatus: response.status,
+        geminiStatus: typeof geminiError.status === "string" ? geminiError.status : "",
+        geminiCode: typeof geminiError.code === "number" ? geminiError.code : null,
+        message: typeof geminiError.message === "string" ? geminiError.message : response.statusText || "Unknown error"
+      });
+
       throw new Error(getGeminiErrorMessage(response.status, responseBody));
     }
 
