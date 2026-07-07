@@ -1,13 +1,18 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const GEMINI_MODEL = "gemini-3.5-flash";
-  // Fallback option for future work: gemini-3.1-flash-lite
-  const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  const GEMINI_MODEL_PRESETS = {
+    auto: "gemini-3.5-flash",
+    "flash-lite": "gemini-3.1-flash-lite",
+    flash: "gemini-3.5-flash",
+    pro: "gemini-3.1-pro-preview"
+  };
   const POPUP_DRAFT_STORAGE_KEY = "nornDraftPopupDraftState";
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
     apiKey: "",
     defaultTone: "Professional",
-    replyLength: "Balanced"
+    replyLength: "Balanced",
+    geminiModelPreset: "auto",
+    geminiCustomModel: ""
   };
 
   const toneChips = Array.from(document.querySelectorAll(".tone-chip"));
@@ -287,33 +292,43 @@ document.addEventListener("DOMContentLoaded", () => {
     ].join("\n");
   };
 
-  const getGeminiErrorMessage = (statusCode, responseBody) => {
+  const resolveGeminiModel = (settings) => {
+    const preset = settings.geminiModelPreset || DEFAULT_SETTINGS.geminiModelPreset;
+
+    if (preset === "custom") {
+      return (settings.geminiCustomModel || "").trim();
+    }
+
+    return GEMINI_MODEL_PRESETS[preset] || GEMINI_MODEL_PRESETS.auto;
+  };
+
+  const getGeminiErrorMessage = (statusCode, responseBody, model) => {
     const geminiError = responseBody?.error || {};
     const geminiStatus = typeof geminiError.status === "string" ? geminiError.status : "";
     const geminiCode = typeof geminiError.code === "number" ? geminiError.code : null;
     const apiMessage = typeof geminiError.message === "string" ? geminiError.message : "";
 
     if (statusCode === 400) {
-      return `Gemini request was rejected for ${GEMINI_MODEL}. Check the model name and request format.`;
+      return `Gemini request was rejected for ${model}. Check the model name and request format.`;
     }
 
     if (statusCode === 401 || statusCode === 403) {
-      return `Gemini API key or project access issue for ${GEMINI_MODEL}. Check that the Gemini API key is valid and has access.`;
+      return `Gemini API key or project access issue for ${model}. Check that the Gemini API key is valid and has access to the selected model.`;
     }
 
     if (statusCode === 404 || /not.?found|model/i.test(apiMessage) || /not.?found|model/i.test(geminiStatus)) {
-      return `Gemini model was not found for ${GEMINI_MODEL}. Check the configured model name.`;
+      return `Gemini model was not found for ${model}. Check the configured model name.`;
     }
 
     if (statusCode === 429 || /quota|rate/i.test(apiMessage) || /quota|rate/i.test(geminiStatus)) {
-      return `Gemini quota/rate limit was reached, or this API project has no available quota for ${GEMINI_MODEL}.`;
+      return `Gemini quota/rate limit was reached, or this API project has no available quota for ${model}. The selected model may not be available for this API key or project.`;
     }
 
     if (statusCode >= 500) {
-      return `Gemini service error for ${GEMINI_MODEL}. Try again later.`;
+      return `Gemini service error for ${model}. Try again later.`;
     }
 
-    return `Gemini returned an error for ${GEMINI_MODEL}. Try again later.`;
+    return `Gemini returned an error for ${model}. Try again later.`;
   };
 
   const extractGeminiReply = (responseBody) => {
@@ -336,8 +351,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const callGemini = async ({ apiKey, prompt }) => {
-    const response = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+  const callGemini = async ({ apiKey, model, prompt }) => {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    const response = await fetch(`${endpoint}?key=${encodeURIComponent(apiKey)}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -365,14 +381,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!response.ok) {
       const geminiError = responseBody.error || {};
       console.warn("Gemini generation failed", {
-        model: GEMINI_MODEL,
+        model,
         httpStatus: response.status,
         geminiStatus: typeof geminiError.status === "string" ? geminiError.status : "",
         geminiCode: typeof geminiError.code === "number" ? geminiError.code : null,
         message: typeof geminiError.message === "string" ? geminiError.message : response.statusText || "Unknown error"
       });
 
-      throw new Error(getGeminiErrorMessage(response.status, responseBody));
+      throw new Error(getGeminiErrorMessage(response.status, responseBody, model));
     }
 
     const reply = extractGeminiReply(responseBody);
@@ -423,6 +439,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const geminiModel = resolveGeminiModel(currentSettings);
+
+    if (!geminiModel) {
+      generatedReply = "";
+      setOutput("Please enter a custom Gemini model name or choose a preset model.");
+      setStatus("Please enter a custom Gemini model name or choose a preset model.", "validation");
+      saveDraftState();
+      return;
+    }
+
     const aiPrompt = buildPrompt({
       mode: selectedMode,
       tones: getSelectedTones(),
@@ -440,6 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       generatedReply = await callGemini({
         apiKey: currentSettings.apiKey,
+        model: geminiModel,
         prompt: aiPrompt
       });
       setOutput(generatedReply);

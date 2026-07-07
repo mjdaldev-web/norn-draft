@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Added Gemini model selection in Settings.
+- Added Auto / Recommended, Flash-Lite, Flash, Pro, and Custom Gemini model choices.
+- Added Custom Gemini model name storage and validation.
+- Improved Gemini model-specific error clarity.
+
 ## 1.1.0
 
 - Added persistent popup draft state in `chrome.storage.local`.

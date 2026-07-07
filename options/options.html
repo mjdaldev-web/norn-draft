@@ -50,6 +50,33 @@
           <button id="clear-api-key" class="button button--secondary button--inline" type="button">Clear API Key</button>
         </section>
 
+        <section class="settings__panel" aria-labelledby="gemini-model-title">
+          <div class="settings__heading">
+            <h2 id="gemini-model-title">Gemini model</h2>
+            <p>Applies when Gemini is selected as the AI provider.</p>
+          </div>
+
+          <label class="field" for="gemini-model-preset">
+            <span>Model</span>
+            <select id="gemini-model-preset" name="geminiModelPreset">
+              <option value="auto">Auto / Recommended</option>
+              <option value="flash-lite">Gemini 3.1 Flash-Lite</option>
+              <option value="flash">Gemini 3.5 Flash</option>
+              <option value="pro">Gemini 3.1 Pro</option>
+              <option value="custom">Custom model name</option>
+            </select>
+          </label>
+
+          <label class="field field--custom-model" for="gemini-custom-model">
+            <span>Custom model name</span>
+            <input id="gemini-custom-model" name="geminiCustomModel" type="text" autocomplete="off" placeholder="gemini-3.5-flash" />
+          </label>
+
+          <p class="field-help">
+            Recommended uses Gemini 3.5 Flash. Flash-Lite is faster/lighter. Pro may require API access. Custom is for advanced users.
+          </p>
+        </section>
+
         <section class="settings__panel" aria-labelledby="defaults-title">
           <div class="settings__heading">
             <h2 id="defaults-title">Draft defaults</h2>

@@ -120,6 +120,17 @@ body {
   margin-top: 14px;
 }
 
+.field--custom-model {
+  margin-top: 14px;
+}
+
+.field-help {
+  margin: 10px 0 0;
+  color: #526071;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -143,6 +154,12 @@ select {
 
 input::placeholder {
   color: #7b8797;
+}
+
+input:disabled {
+  color: #7b8797;
+  background: #f4f7fb;
+  cursor: not-allowed;
 }
 
 .button {

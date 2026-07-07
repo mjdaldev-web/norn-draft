@@ -3,7 +3,9 @@ document.addEventListener("DOMContentLoaded", () => {
     provider: "Gemini",
     apiKey: "",
     defaultTone: "Professional",
-    replyLength: "Balanced"
+    replyLength: "Balanced",
+    geminiModelPreset: "auto",
+    geminiCustomModel: ""
   };
 
   const form = document.querySelector("#settings-form");
@@ -13,10 +15,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetSettingsButton = document.querySelector("#reset-settings");
   const defaultToneSelect = document.querySelector("#default-tone");
   const replyLengthSelect = document.querySelector("#reply-length");
+  const geminiModelPresetSelect = document.querySelector("#gemini-model-preset");
+  const geminiCustomModelInput = document.querySelector("#gemini-custom-model");
   const status = document.querySelector("#status");
 
   const storage = chrome.storage.local;
   let statusTimeoutId = null;
+  const geminiModelPresets = ["auto", "flash-lite", "flash", "pro", "custom"];
 
   const clearStatusTimer = () => {
     if (statusTimeoutId) {
@@ -82,12 +87,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const syncCustomModelInput = () => {
+    const isCustomModel = geminiModelPresetSelect.value === "custom";
+    geminiCustomModelInput.disabled = !isCustomModel;
+    geminiCustomModelInput.setAttribute("aria-disabled", String(!isCustomModel));
+  };
+
   const readFormSettings = () => {
     return {
       provider: getSelectedProvider(),
       apiKey: apiKeyInput.value.trim(),
       defaultTone: defaultToneSelect.value,
-      replyLength: replyLengthSelect.value
+      replyLength: replyLengthSelect.value,
+      geminiModelPreset: geminiModelPresetSelect.value,
+      geminiCustomModel: geminiCustomModelInput.value.trim()
     };
   };
 
@@ -96,6 +109,11 @@ document.addEventListener("DOMContentLoaded", () => {
     apiKeyInput.value = settings.apiKey;
     defaultToneSelect.value = settings.defaultTone;
     replyLengthSelect.value = settings.replyLength;
+    geminiModelPresetSelect.value = geminiModelPresets.includes(settings.geminiModelPreset)
+      ? settings.geminiModelPreset
+      : defaults.geminiModelPreset;
+    geminiCustomModelInput.value = settings.geminiCustomModel;
+    syncCustomModelInput();
   };
 
   const loadSettings = async () => {
@@ -111,9 +129,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const settings = readFormSettings();
+
+    if (settings.geminiModelPreset === "custom" && !settings.geminiCustomModel) {
+      setStatus("Please enter a custom Gemini model name or choose a preset model.", "validation");
+      geminiCustomModelInput.focus();
+      return;
+    }
 
     try {
-      await storage.set(readFormSettings());
+      await storage.set(settings);
       setStatus("Settings saved locally.", "success");
     } catch (error) {
       setStatus("Settings could not be saved. Please try again.", "error");
@@ -146,6 +171,10 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       setStatus("Settings could not be reset. Please try again.", "error");
     }
+  });
+
+  geminiModelPresetSelect.addEventListener("change", () => {
+    syncCustomModelInput();
   });
 
   loadSettings();
