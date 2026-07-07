@@ -217,6 +217,13 @@ textarea {
   margin-top: 8px;
 }
 
+.composer__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 textarea::placeholder {
   color: #7b8797;
 }
@@ -234,8 +241,6 @@ textarea::placeholder {
 }
 
 .button--primary {
-  width: 100%;
-  margin-top: 10px;
   color: #ffffff;
   background: #0f766e;
 }

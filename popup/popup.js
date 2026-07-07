@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const GEMINI_MODEL = "gemini-3.5-flash";
   // Fallback option for future work: gemini-3.1-flash-lite
   const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  const POPUP_DRAFT_STORAGE_KEY = "nornDraftPopupDraftState";
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
     apiKey: "",
@@ -16,22 +17,72 @@ document.addEventListener("DOMContentLoaded", () => {
   const promptInput = document.querySelector("#prompt");
   const contextInput = document.querySelector("#context");
   const generateButton = document.querySelector("#generate");
+  const clearButton = document.querySelector("#clear");
   const copyButton = document.querySelector("#copy");
   const settingsButton = document.querySelector("#settings");
   const output = document.querySelector("#reply-output");
   const status = document.querySelector("#status");
+  const initialOutputText = output.textContent.trim();
+  const validModes = ["Generate Reply", "Rewrite Draft"];
+  const validTones = toneChips.map((chip) => chip.dataset.tone);
 
   let selectedTones = ["Professional"];
   let selectedMode = "Generate Reply";
   let generatedReply = "";
   let currentSettings = { ...DEFAULT_SETTINGS };
+  let statusTimeoutId = null;
+  let saveDraftTimeoutId = null;
 
-  const setStatus = (message, type) => {
+  const getStatusDuration = (type, duration) => {
+    if (duration !== undefined) {
+      return duration;
+    }
+
+    if (type === "success") {
+      return 3000;
+    }
+
+    if (type === "validation") {
+      return 4000;
+    }
+
+    if (type === "error") {
+      return 7000;
+    }
+
+    return 0;
+  };
+
+  const clearStatusTimer = () => {
+    if (statusTimeoutId) {
+      window.clearTimeout(statusTimeoutId);
+      statusTimeoutId = null;
+    }
+  };
+
+  const setStatus = (message, type, options = {}) => {
+    clearStatusTimer();
     status.textContent = message;
-    status.classList.remove("is-success", "is-error");
+    status.classList.remove("is-success", "is-error", "is-validation");
 
-    if (type) {
+    if (type === "validation") {
+      status.classList.add("is-error");
+    } else if (type) {
       status.classList.add(`is-${type}`);
+    }
+
+    if (!message || options.persist) {
+      return;
+    }
+
+    const duration = getStatusDuration(type, options.duration);
+
+    if (duration > 0) {
+      statusTimeoutId = window.setTimeout(() => {
+        status.textContent = "";
+        status.classList.remove("is-success", "is-error", "is-validation");
+        statusTimeoutId = null;
+      }, duration);
     }
   };
 
@@ -48,6 +99,55 @@ document.addEventListener("DOMContentLoaded", () => {
     return [...selectedTones];
   };
 
+  const getFallbackTone = () => {
+    return validTones.includes(currentSettings.defaultTone)
+      ? currentSettings.defaultTone
+      : DEFAULT_SETTINGS.defaultTone;
+  };
+
+  const sanitizeTones = (tones) => {
+    if (!Array.isArray(tones)) {
+      return [getFallbackTone()];
+    }
+
+    const cleanTones = tones.filter((tone, index) => {
+      return validTones.includes(tone) && tones.indexOf(tone) === index;
+    });
+
+    return cleanTones.length > 0 ? cleanTones : [getFallbackTone()];
+  };
+
+  const getDraftState = () => {
+    return {
+      selectedMode,
+      selectedTones: getSelectedTones(),
+      prompt: promptInput.value,
+      context: contextInput.value,
+      generatedReply
+    };
+  };
+
+  const saveDraftState = async () => {
+    try {
+      await chrome.storage.local.set({
+        [POPUP_DRAFT_STORAGE_KEY]: getDraftState()
+      });
+    } catch (error) {
+      setStatus("Draft could not be saved locally.", "error");
+    }
+  };
+
+  const scheduleDraftSave = () => {
+    if (saveDraftTimeoutId) {
+      window.clearTimeout(saveDraftTimeoutId);
+    }
+
+    saveDraftTimeoutId = window.setTimeout(() => {
+      saveDraftTimeoutId = null;
+      saveDraftState();
+    }, 350);
+  };
+
   const syncToneChips = () => {
     toneChips.forEach((chip) => {
       const isSelected = selectedTones.includes(chip.dataset.tone);
@@ -61,12 +161,18 @@ document.addEventListener("DOMContentLoaded", () => {
     syncToneChips();
   };
 
+  const setMode = (mode) => {
+    selectedMode = validModes.includes(mode) ? mode : "Generate Reply";
+    syncModeOptions();
+    updateModeCopy();
+  };
+
   const toggleTone = (selectedChip) => {
     const tone = selectedChip.dataset.tone;
     const isSelected = selectedTones.includes(tone);
 
     if (isSelected && selectedTones.length === 1) {
-      setStatus("Select at least one tone.", "error");
+      setStatus("Select at least one tone.", "validation");
       return;
     }
 
@@ -76,6 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     syncToneChips();
     setStatus(`Selected tones: ${selectedTones.join(", ")}.`, "success");
+    saveDraftState();
   };
 
   const syncModeOptions = () => {
@@ -100,31 +207,46 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const selectMode = (selectedOption) => {
-    selectedMode = selectedOption.dataset.mode;
-    syncModeOptions();
-    updateModeCopy();
+    setMode(selectedOption.dataset.mode);
     setStatus(`${selectedMode} mode selected.`, "success");
+    saveDraftState();
   };
 
-  const loadSettings = async ({ applyDefaultTone = false } = {}) => {
+  const loadSettings = async () => {
     try {
       const savedSettings = await chrome.storage.local.get(DEFAULT_SETTINGS);
       currentSettings = { ...DEFAULT_SETTINGS, ...savedSettings };
-      const savedToneChip = toneChips.find((chip) => chip.dataset.tone === currentSettings.defaultTone);
-
-      if (applyDefaultTone && savedToneChip) {
-        setDefaultTone(savedToneChip.dataset.tone);
-      }
-
-      setStatus("");
     } catch (error) {
       currentSettings = { ...DEFAULT_SETTINGS };
+    }
+  };
 
-      if (applyDefaultTone) {
-        setDefaultTone(DEFAULT_SETTINGS.defaultTone);
-      }
+  const applyDraftState = (draftState) => {
+    if (!draftState || typeof draftState !== "object") {
+      setMode("Generate Reply");
+      setDefaultTone(getFallbackTone());
+      promptInput.value = "";
+      contextInput.value = "";
+      generatedReply = "";
+      setOutput(initialOutputText);
+      return;
+    }
 
-      setStatus("");
+    setMode(draftState.selectedMode);
+    selectedTones = sanitizeTones(draftState.selectedTones);
+    syncToneChips();
+    promptInput.value = typeof draftState.prompt === "string" ? draftState.prompt : "";
+    contextInput.value = typeof draftState.context === "string" ? draftState.context : "";
+    generatedReply = typeof draftState.generatedReply === "string" ? draftState.generatedReply : "";
+    setOutput(generatedReply || initialOutputText);
+  };
+
+  const loadDraftState = async () => {
+    try {
+      const stored = await chrome.storage.local.get(POPUP_DRAFT_STORAGE_KEY);
+      applyDraftState(stored[POPUP_DRAFT_STORAGE_KEY]);
+    } catch (error) {
+      applyDraftState(null);
     }
   };
 
@@ -268,8 +390,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!prompt) {
       generatedReply = "";
-      output.textContent = "Type or paste a message first, then generate a recommended reply.";
-      setStatus("Add a little context first, then we can draft from there.", "error");
+      setOutput("Type or paste a message first, then generate a recommended reply.");
+      setStatus("Add a little context first, then we can draft from there.", "validation");
+      saveDraftState();
       promptInput.focus();
       return;
     }
@@ -280,6 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
       generatedReply = "";
       setOutput("OpenAI support is not connected yet. Choose Gemini in Settings to generate a reply now.");
       setStatus("OpenAI support is not connected yet.", "error");
+      saveDraftState();
       return;
     }
 
@@ -287,6 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
       generatedReply = "";
       setOutput("This AI provider is not supported yet. Choose Gemini in Settings.");
       setStatus("Unsupported AI provider.", "error");
+      saveDraftState();
       return;
     }
 
@@ -294,6 +419,7 @@ document.addEventListener("DOMContentLoaded", () => {
       generatedReply = "";
       setOutput("Please add your API key in Settings first.");
       setStatus("Please add your API key in Settings first.", "error");
+      saveDraftState();
       return;
     }
 
@@ -308,7 +434,8 @@ document.addEventListener("DOMContentLoaded", () => {
     generatedReply = "";
     setLoading(true);
     setOutput("Generating your recommended reply...");
-    setStatus("Generating with Gemini...", "success");
+    setStatus("Generating with Gemini...", "success", { persist: true });
+    saveDraftState();
 
     try {
       generatedReply = await callGemini({
@@ -317,27 +444,50 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       setOutput(generatedReply);
       setStatus("Reply generated.", "success");
+      await saveDraftState();
     } catch (error) {
       generatedReply = "";
 
       if (error instanceof TypeError) {
         setOutput("Network connection failed. Check your connection and try again.");
         setStatus("Network connection failed.", "error");
+        await saveDraftState();
         return;
       }
 
       setOutput(error.message || "The reply could not be generated. Please try again.");
       setStatus(error.message || "The reply could not be generated.", "error");
+      await saveDraftState();
     } finally {
       setLoading(false);
     }
   };
 
   generateButton.addEventListener("click", generateReply);
+  clearButton.addEventListener("click", async () => {
+    if (saveDraftTimeoutId) {
+      window.clearTimeout(saveDraftTimeoutId);
+      saveDraftTimeoutId = null;
+    }
+
+    promptInput.value = "";
+    contextInput.value = "";
+    generatedReply = "";
+    setOutput(initialOutputText);
+    setMode("Generate Reply");
+    setDefaultTone(getFallbackTone());
+
+    try {
+      await chrome.storage.local.remove(POPUP_DRAFT_STORAGE_KEY);
+      setStatus("Draft cleared.", "success");
+    } catch (error) {
+      setStatus("Draft cleared, but saved draft state could not be removed.", "error");
+    }
+  });
 
   copyButton.addEventListener("click", async () => {
     if (!generatedReply) {
-      setStatus("Generate a reply first, then copy will be ready.", "error");
+      setStatus("Generate a reply first, then copy will be ready.", "validation");
       return;
     }
 
@@ -361,8 +511,12 @@ document.addEventListener("DOMContentLoaded", () => {
     option.addEventListener("click", () => selectMode(option));
   });
 
-  syncToneChips();
-  syncModeOptions();
-  updateModeCopy();
-  loadSettings({ applyDefaultTone: true });
+  promptInput.addEventListener("input", scheduleDraftSave);
+  contextInput.addEventListener("input", scheduleDraftSave);
+
+  loadSettings()
+    .then(loadDraftState)
+    .then(() => {
+      setStatus("");
+    });
 });

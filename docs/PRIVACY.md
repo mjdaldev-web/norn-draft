@@ -20,7 +20,9 @@ Norn Draft V1 does not read the current page, tabs, browsing history, cookies, o
 
 ## Generated Replies
 
-Generated replies are displayed in the popup so you can review and copy them. Norn Draft does not store generated replies in V1.
+Generated replies are displayed in the popup so you can review and copy them. Norn Draft V1.1 stores only the current popup draft state locally so your in-progress work can be restored if the popup closes.
+
+Norn Draft does not store a generated-reply history list.
 
 ## External Requests
 

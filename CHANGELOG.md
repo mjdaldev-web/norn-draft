@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- Added persistent popup draft state in `chrome.storage.local`.
+- Added auto-save for typed popup content, selected tones, mode, context, and generated output.
+- Added a Clear button that resets popup draft state without clearing settings or API keys.
+- Added auto-clearing popup status messages.
+
 ## 1.0.0
 
 - Added polished popup UI for reply drafting and draft rewriting.

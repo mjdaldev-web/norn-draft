@@ -9,6 +9,7 @@ Norn Draft is a lightweight Manifest V3 browser extension for drafting polished 
 - Select one or more tones: Professional, Friendly, Empathetic, Instructional, Short, and Detailed
 - Add optional context/details for names, dates, deadlines, case numbers, or background
 - Copy the generated reply
+- Restore in-progress popup drafts after the extension popup closes
 - Store settings locally with `chrome.storage.local`
 - Configure Gemini provider, API key, default tone, and default reply length
 
@@ -36,7 +37,8 @@ Norn Draft uses the saved Gemini API key only when you click **Generate Reply** 
 - V1 does not read the current page.
 - Only text you type into the popup is used for generation.
 - Your API key is stored locally in this browser using `chrome.storage.local`.
-- Generated replies are displayed in the popup and are not stored by the extension.
+- In-progress popup draft state, including the current generated reply, is stored locally so closing the popup does not lose your work.
+- Norn Draft does not store a generated-reply history list.
 - Norn Draft does not include analytics, tracking, ads, external scripts, or automatic clipboard/page reading.
 
 See [docs/PRIVACY.md](docs/PRIVACY.md) for more detail.
