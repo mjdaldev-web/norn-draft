@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.0
+
+- Prepared V1.5 release readiness with current Gemini and OpenAI provider support.
+- Confirmed provider-specific Gemini and OpenAI API key behavior remains local and separate.
+- Refreshed release documentation for V1.5 features, privacy behavior, history controls, and manual testing.
+- Confirmed permissions remain limited to storage plus Gemini and OpenAI API hosts.
+
 ## 1.4.2
 
 - Moved AI provider and API key settings into the AI Models tab.

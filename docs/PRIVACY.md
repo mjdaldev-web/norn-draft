@@ -1,6 +1,6 @@
 # Norn Draft Privacy
 
-Norn Draft V1.4.2 is designed to stay lightweight and explicit about what it uses.
+Norn Draft V1.5 is designed to stay lightweight and explicit about what it uses.
 
 ## What the Extension Uses
 
