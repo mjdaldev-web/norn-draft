@@ -350,6 +350,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const normalizeGeminiErrorMessage = (error, fallbackMessage) => {
+    if (error instanceof Error && typeof error.message === "string" && error.message.trim()) {
+      return error.message;
+    }
+
+    if (typeof error === "string" && error.trim()) {
+      return error;
+    }
+
+    return fallbackMessage;
+  };
+
   const callGemini = async ({ apiKey, model, prompt }) => {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const response = await fetch(`${endpoint}?key=${encodeURIComponent(apiKey)}`, {
@@ -379,13 +391,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!response.ok) {
       const geminiError = responseBody.error || {};
-      console.warn("Gemini generation failed", {
-        model,
-        httpStatus: response.status,
-        geminiStatus: typeof geminiError.status === "string" ? geminiError.status : "",
-        geminiCode: typeof geminiError.code === "number" ? geminiError.code : null,
-        message: typeof geminiError.message === "string" ? geminiError.message : response.statusText || "Unknown error"
-      });
+      const geminiStatus = typeof geminiError.status === "string" ? geminiError.status : "";
+      const geminiCode = typeof geminiError.code === "number" ? geminiError.code : null;
+      const geminiMessage = typeof geminiError.message === "string" && geminiError.message.trim()
+        ? geminiError.message.trim()
+        : response.statusText || "Unknown error";
+      const warningParts = [`Gemini generation failed for ${model}`, `HTTP ${response.status}`];
+
+      if (geminiCode !== null) {
+        warningParts.push(`code ${geminiCode}`);
+      }
+
+      if (geminiStatus) {
+        warningParts.push(`status ${geminiStatus}`);
+      }
+
+      if (geminiMessage) {
+        warningParts.push(geminiMessage);
+      }
+
+      console.warn(warningParts.join(" - "));
 
       throw new Error(getGeminiErrorMessage(response.status, responseBody, model));
     }
@@ -473,6 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await saveDraftState();
     } catch (error) {
       generatedReply = "";
+      const safeMessage = normalizeGeminiErrorMessage(error, "The reply could not be generated. Please try again.");
 
       if (error instanceof TypeError) {
         setOutput("Network connection failed. Check your connection and try again.");
@@ -481,8 +507,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      setOutput(error.message || "The reply could not be generated. Please try again.");
-      setStatus(error.message || "The reply could not be generated.", "error");
+      setOutput(safeMessage);
+      setStatus(safeMessage, "error");
       await saveDraftState();
     } finally {
       setLoading(false);
