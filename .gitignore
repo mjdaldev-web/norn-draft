@@ -1,0 +1,17 @@
+# Extension / app artifacts
+dist/
+build/
+out/
+
+# Dependency folders
+node_modules/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+
+# Logs
+*.log

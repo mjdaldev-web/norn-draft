@@ -1,0 +1,44 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #1f2937;
+  background: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f8fafc;
+}
+
+.options {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.options__header h1,
+.options__panel h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.options__header p,
+.options__panel p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.options__panel {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  background: #ffffff;
+}

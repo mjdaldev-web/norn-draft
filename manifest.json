@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Norn Draft",
+  "version": "0.1.0",
+  "description": "Initial scaffold for the Norn Draft browser extension.",
+  "action": {
+    "default_title": "Norn Draft",
+    "default_popup": "popup/popup.html"
+  },
+  "options_page": "options/options.html",
+  "permissions": [],
+  "host_permissions": []
+}
