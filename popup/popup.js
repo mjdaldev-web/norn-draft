@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const output = document.querySelector("#reply-output");
   const status = document.querySelector("#status");
 
-  let selectedTone = "Professional";
+  let selectedTones = ["Professional"];
   let generatedReply = "";
 
   const setStatus = (message, type) => {
@@ -19,21 +19,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  const selectTone = (selectedChip) => {
-    selectedTone = selectedChip.dataset.tone;
-
+  const syncToneChips = () => {
     toneChips.forEach((chip) => {
-      const isSelected = chip === selectedChip;
+      const isSelected = selectedTones.includes(chip.dataset.tone);
       chip.classList.toggle("is-selected", isSelected);
       chip.setAttribute("aria-checked", String(isSelected));
     });
-
-    setStatus(`${selectedTone} tone selected.`, "success");
   };
 
-  toneChips.forEach((chip) => {
-    chip.addEventListener("click", () => selectTone(chip));
-  });
+  const setDefaultTone = (tone) => {
+    selectedTones = [tone];
+    syncToneChips();
+  };
+
+  const toggleTone = (selectedChip) => {
+    const tone = selectedChip.dataset.tone;
+    const isSelected = selectedTones.includes(tone);
+
+    if (isSelected && selectedTones.length === 1) {
+      setStatus("Select at least one tone.", "error");
+      return;
+    }
+
+    selectedTones = isSelected
+      ? selectedTones.filter((selectedTone) => selectedTone !== tone)
+      : [...selectedTones, tone];
+
+    syncToneChips();
+    setStatus(`Selected tones: ${selectedTones.join(", ")}.`, "success");
+  };
 
   const loadDefaultTone = async () => {
     try {
@@ -41,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const savedToneChip = toneChips.find((chip) => chip.dataset.tone === defaultTone);
 
       if (savedToneChip) {
-        selectTone(savedToneChip);
+        setDefaultTone(savedToneChip.dataset.tone);
         setStatus("");
       }
     } catch (error) {
@@ -60,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    generatedReply = `AI integration is not connected yet.\n\nSelected tone: ${selectedTone}\n\nWhen API support is added, Norn Draft will use the text you typed here to draft a polished reply in this tone.`;
+    generatedReply = `AI integration is not connected yet.\n\nSelected tones: ${selectedTones.join(", ")}.\n\nWhen API support is added, Norn Draft will use the text you typed here to draft a polished reply with these tone choices.`;
     output.textContent = generatedReply;
     setStatus("Placeholder reply generated locally.", "success");
   });
@@ -83,5 +97,10 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.runtime.openOptionsPage();
   });
 
+  toneChips.forEach((chip) => {
+    chip.addEventListener("click", () => toggleTone(chip));
+  });
+
+  syncToneChips();
   loadDefaultTone();
 });
