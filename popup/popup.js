@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const GEMINI_MODEL = "gemini-2.0-flash";
+  const GEMINI_MODEL = "gemini-3.5-flash";
+  // Fallback option for future work: gemini-3.1-flash-lite
   const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
