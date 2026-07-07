@@ -84,3 +84,9 @@ Extension icons are generated from `icons/norn-draft-logo.png` and wired into th
 - Popup and Options JavaScript syntax checks pass.
 - Extension loads as an unpacked Chrome/Edge extension.
 - No API keys or secrets are committed.
+
+## Repository Purpose
+
+This repository is a public showcase and release repository for Norn Draft.
+
+Norn Draft is a privacy-focused browser extension for drafting and rewriting replies using user-provided AI API keys. Source code visibility may be limited depending on the release, but official documentation and release downloads are provided here.
