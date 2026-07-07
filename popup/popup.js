@@ -404,6 +404,13 @@ document.addEventListener("DOMContentLoaded", () => {
     return fallbackMessage;
   };
 
+  const createFailureResult = (message) => {
+    return {
+      ok: false,
+      errorMessage: message
+    };
+  };
+
   const getOpenAiErrorMessage = (statusCode, responseBody, model) => {
     const openAiError = responseBody?.error || {};
     const apiMessage = typeof openAiError.message === "string" ? openAiError.message : "";
@@ -465,38 +472,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const responseBody = safeParseJson(responseText) || {};
 
     if (!response.ok) {
-      const geminiError = responseBody.error || {};
-      const geminiStatus = typeof geminiError.status === "string" ? geminiError.status : "";
-      const geminiCode = typeof geminiError.code === "number" ? geminiError.code : null;
-      const geminiMessage = typeof geminiError.message === "string" && geminiError.message.trim()
-        ? geminiError.message.trim()
-        : response.statusText || "Unknown error";
-      const warningParts = [`Gemini generation failed for ${model}`, `HTTP ${response.status}`];
-
-      if (geminiCode !== null) {
-        warningParts.push(`code ${geminiCode}`);
-      }
-
-      if (geminiStatus) {
-        warningParts.push(`status ${geminiStatus}`);
-      }
-
-      if (geminiMessage) {
-        warningParts.push(geminiMessage);
-      }
-
-      console.warn(warningParts.join(" - "));
-
-      throw new Error(getGeminiErrorMessage(response.status, responseBody, model));
+      return createFailureResult(getGeminiErrorMessage(response.status, responseBody, model));
     }
 
     const reply = extractGeminiReply(responseBody);
 
     if (!reply) {
-      throw new Error("Gemini returned an empty reply. Please try again.");
+      return createFailureResult("Gemini returned an empty reply. Please try again.");
     }
 
-    return reply;
+    return {
+      ok: true,
+      reply
+    };
   };
 
   const callOpenAi = async ({ apiKey, model, prompt }) => {
@@ -516,38 +504,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const responseBody = safeParseJson(responseText) || {};
 
     if (!response.ok) {
-      const openAiError = responseBody.error || {};
-      const errorCode = typeof openAiError.code === "string" ? openAiError.code : "";
-      const errorType = typeof openAiError.type === "string" ? openAiError.type : "";
-      const apiMessage = typeof openAiError.message === "string" && openAiError.message.trim()
-        ? openAiError.message.trim()
-        : response.statusText || "Unknown error";
-      const warningParts = [`OpenAI generation failed for ${model}`, `HTTP ${response.status}`];
-
-      if (errorCode) {
-        warningParts.push(`code ${errorCode}`);
-      }
-
-      if (errorType) {
-        warningParts.push(`type ${errorType}`);
-      }
-
-      if (apiMessage) {
-        warningParts.push(apiMessage);
-      }
-
-      console.warn(warningParts.join(" - "));
-
-      throw new Error(getOpenAiErrorMessage(response.status, responseBody, model));
+      return createFailureResult(getOpenAiErrorMessage(response.status, responseBody, model));
     }
 
     const reply = extractOpenAiReply(responseBody);
 
     if (!reply) {
-      throw new Error("OpenAI returned an empty reply. Please try again.");
+      return createFailureResult("OpenAI returned an empty reply. Please try again.");
     }
 
-    return reply;
+    return {
+      ok: true,
+      reply
+    };
   };
 
   const generateReply = async () => {
@@ -615,7 +584,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveDraftState();
 
     try {
-      generatedReply = isOpenAiProvider
+      const generationResult = isOpenAiProvider
         ? await callOpenAi({
             apiKey: currentSettings.apiKey,
             model: selectedModel,
@@ -626,6 +595,15 @@ document.addEventListener("DOMContentLoaded", () => {
             model: selectedModel,
             prompt: aiPrompt
           });
+      if (!generationResult.ok) {
+        generatedReply = "";
+        setOutput(generationResult.errorMessage);
+        setStatus(generationResult.errorMessage, "error");
+        await saveDraftState();
+        return;
+      }
+
+      generatedReply = generationResult.reply;
       setOutput(generatedReply);
       setStatus("Reply generated.", "success");
       await saveDraftState();
