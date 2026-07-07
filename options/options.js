@@ -16,13 +16,58 @@ document.addEventListener("DOMContentLoaded", () => {
   const status = document.querySelector("#status");
 
   const storage = chrome.storage.local;
+  let statusTimeoutId = null;
 
-  const setStatus = (message, type) => {
+  const clearStatusTimer = () => {
+    if (statusTimeoutId) {
+      window.clearTimeout(statusTimeoutId);
+      statusTimeoutId = null;
+    }
+  };
+
+  const getStatusDuration = (type, duration) => {
+    if (duration !== undefined) {
+      return duration;
+    }
+
+    if (type === "success") {
+      return 3000;
+    }
+
+    if (type === "validation") {
+      return 4000;
+    }
+
+    if (type === "error") {
+      return 7000;
+    }
+
+    return 0;
+  };
+
+  const setStatus = (message, type, options = {}) => {
+    clearStatusTimer();
     status.textContent = message;
     status.classList.remove("is-success", "is-error");
 
-    if (type) {
+    if (type === "validation") {
+      status.classList.add("is-error");
+    } else if (type) {
       status.classList.add(`is-${type}`);
+    }
+
+    if (!message || options.persist) {
+      return;
+    }
+
+    const duration = getStatusDuration(type, options.duration);
+
+    if (duration > 0) {
+      statusTimeoutId = window.setTimeout(() => {
+        status.textContent = "";
+        status.classList.remove("is-success", "is-error");
+        statusTimeoutId = null;
+      }, duration);
     }
   };
 
