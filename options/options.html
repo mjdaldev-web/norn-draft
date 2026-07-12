@@ -18,6 +18,7 @@
         <div class="tabs" role="tablist" aria-label="Settings sections">
           <button id="tab-general" class="tab is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-general" data-tab="general">General</button>
           <button id="tab-models" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-models" data-tab="models">AI Models</button>
+          <button id="tab-presets" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-presets" data-tab="presets">Presets</button>
           <button id="tab-history" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-history" data-tab="history">History</button>
           <button id="tab-privacy" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-privacy" data-tab="privacy">Privacy</button>
         </div>
@@ -141,6 +142,42 @@
           </section>
         </div>
 
+        <div id="panel-presets" class="tab-panel" role="tabpanel" aria-labelledby="tab-presets" data-tab-panel="presets" hidden>
+          <section class="settings__panel" aria-labelledby="preset-manager-title">
+            <div class="settings__heading settings__heading--actions">
+              <div>
+                <h2 id="preset-manager-title">Custom tone presets</h2>
+                <p>Create local, reusable style guidance for drafting and rewriting.</p>
+              </div>
+              <button id="add-preset" class="button button--secondary" type="button">Add preset</button>
+            </div>
+
+            <p id="preset-empty-state" class="preset-empty-state">No custom presets yet. Add one to use it from the popup tone selector.</p>
+            <div id="preset-list" class="preset-list" aria-live="polite"></div>
+
+            <section id="preset-editor" class="preset-editor" aria-labelledby="preset-editor-title" hidden>
+              <div class="preset-editor__heading">
+                <h3 id="preset-editor-title">New custom preset</h3>
+                <p>Custom presets stay in this browser and are only used when you generate or rewrite.</p>
+              </div>
+              <label class="field" for="preset-name">
+                <span>Preset name</span>
+                <input id="preset-name" type="text" maxlength="60" autocomplete="off" placeholder="For example, Warm customer support" />
+              </label>
+              <label class="field" for="preset-instruction">
+                <span>Custom instruction</span>
+                <textarea id="preset-instruction" rows="5" maxlength="1000" placeholder="Describe the style and tone you want Norn Draft to use."></textarea>
+              </label>
+              <p id="preset-character-count" class="field-help field-help--compact">0 / 1000 characters</p>
+              <p id="preset-editor-status" class="preset-editor__status" role="status" aria-live="polite"></p>
+              <div class="preset-editor__actions">
+                <button id="save-preset" class="button button--primary" type="button" disabled>Save preset</button>
+                <button id="cancel-preset" class="button button--secondary" type="button">Cancel</button>
+              </div>
+            </section>
+          </section>
+        </div>
+
         <div id="panel-history" class="tab-panel" role="tabpanel" aria-labelledby="tab-history" data-tab-panel="history" hidden>
           <section class="settings__panel" aria-labelledby="history-title">
             <div class="settings__heading">
@@ -214,7 +251,7 @@
               <div>
                 <p class="about-panel__eyebrow">About</p>
                 <h2 id="about-title">Norn Draft</h2>
-                <p class="about-panel__version">Version 1.6</p>
+                <p class="about-panel__version">Version 1.7</p>
               </div>
             </div>
             <dl class="about-panel__details">
@@ -236,6 +273,7 @@
       </form>
     </main>
 
+    <script src="../shared/tone-presets.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

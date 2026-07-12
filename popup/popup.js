@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const OPENAI_RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
   const POPUP_DRAFT_STORAGE_KEY = "nornDraftPopupDraftState";
   const REPLY_HISTORY_STORAGE_KEY = "nornDraftReplyHistory";
+  const PRESET_STORAGE_KEY = window.NornDraftTonePresets.PRESET_STORAGE_KEY;
   const DEFAULT_HISTORY_LIMIT = 10;
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
@@ -30,6 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const toneChips = Array.from(document.querySelectorAll(".tone-chip"));
+  const customPresetSelect = document.querySelector("#custom-preset");
   const modeOptions = Array.from(document.querySelectorAll(".mode-option"));
   const promptLabel = document.querySelector("#prompt-title");
   const promptHelp = document.querySelector("#prompt-help");
@@ -48,10 +50,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const validTones = toneChips.map((chip) => chip.dataset.tone);
 
   let selectedTones = ["Professional"];
+  let selectedPresetId = "";
   let selectedMode = "Generate Reply";
   let generatedReply = "";
   let currentSettings = { ...DEFAULT_SETTINGS };
   let replyHistory = [];
+  let customPresets = [];
   let statusTimeoutId = null;
   let saveDraftTimeoutId = null;
 
@@ -207,10 +211,47 @@ document.addEventListener("DOMContentLoaded", () => {
     return cleanTones.length > 0 ? cleanTones : [getFallbackTone()];
   };
 
+  const getSelectedCustomPreset = () => {
+    return customPresets.find((preset) => preset.id === selectedPresetId) || null;
+  };
+
+  const syncCustomPresetSelect = () => {
+    const selectedId = window.NornDraftTonePresets.resolvePresetSelection(selectedPresetId, customPresets);
+    selectedPresetId = selectedId;
+    customPresetSelect.replaceChildren();
+
+    const noneOption = document.createElement("option");
+    noneOption.value = "";
+    noneOption.textContent = customPresets.length === 0 ? "No custom presets available" : "No custom preset selected";
+    customPresetSelect.append(noneOption);
+
+    customPresets.forEach((preset) => {
+      const option = document.createElement("option");
+      option.value = preset.id;
+      option.textContent = preset.name;
+      customPresetSelect.append(option);
+    });
+
+    customPresetSelect.value = selectedPresetId;
+  };
+
+  const loadCustomPresets = async () => {
+    try {
+      const stored = await chrome.storage.local.get(PRESET_STORAGE_KEY);
+      const result = window.NornDraftTonePresets.sanitizePresetCollection(stored[PRESET_STORAGE_KEY]);
+      customPresets = result.isSupported ? result.collection.presets : [];
+    } catch (error) {
+      customPresets = [];
+    }
+
+    syncCustomPresetSelect();
+  };
+
   const getDraftState = () => {
     return {
       selectedMode,
       selectedTones: getSelectedTones(),
+      selectedPresetId,
       prompt: promptInput.value,
       context: contextInput.value,
       generatedReply
@@ -293,7 +334,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const setDefaultTone = (tone) => {
     selectedTones = [tone];
+    selectedPresetId = "";
     syncToneChips();
+    syncCustomPresetSelect();
   };
 
   const setMode = (mode) => {
@@ -304,6 +347,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const toggleTone = (selectedChip) => {
     const tone = selectedChip.dataset.tone;
+    const hasCustomPreset = Boolean(getSelectedCustomPreset());
+
+    if (hasCustomPreset) {
+      selectedPresetId = "";
+      selectedTones = [tone];
+      syncToneChips();
+      syncCustomPresetSelect();
+      setStatus(`Selected built-in tone: ${tone}.`, "success");
+      saveDraftState();
+      return;
+    }
+
     const isSelected = selectedTones.includes(tone);
 
     if (isSelected && selectedTones.length === 1) {
@@ -317,6 +372,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     syncToneChips();
     setStatus(`Selected tones: ${selectedTones.join(", ")}.`, "success");
+    saveDraftState();
+  };
+
+  const selectCustomPreset = () => {
+    const nextPresetId = window.NornDraftTonePresets.resolvePresetSelection(customPresetSelect.value, customPresets);
+
+    if (!nextPresetId) {
+      selectedPresetId = "";
+      selectedTones = [getFallbackTone()];
+      syncToneChips();
+      syncCustomPresetSelect();
+      setStatus("Using the default built-in tone.", "success");
+      saveDraftState();
+      return;
+    }
+
+    selectedPresetId = nextPresetId;
+    selectedTones = [];
+    syncToneChips();
+    syncCustomPresetSelect();
+    setStatus(`Custom preset selected: ${getSelectedCustomPreset().name}.`, "success");
     saveDraftState();
   };
 
@@ -449,8 +525,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     setMode(draftState.selectedMode);
-    selectedTones = sanitizeTones(draftState.selectedTones);
+    selectedPresetId = window.NornDraftTonePresets.resolvePresetSelection(draftState.selectedPresetId, customPresets);
+    selectedTones = selectedPresetId ? [] : sanitizeTones(draftState.selectedTones);
     syncToneChips();
+    syncCustomPresetSelect();
     promptInput.value = typeof draftState.prompt === "string" ? draftState.prompt : "";
     contextInput.value = typeof draftState.context === "string" ? draftState.context : "";
     generatedReply = typeof draftState.generatedReply === "string" ? draftState.generatedReply : "";
@@ -464,43 +542,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       applyDraftState(null);
     }
-  };
-
-  const getLengthGuidance = (replyLength) => {
-    if (replyLength === "Concise") {
-      return "Keep the reply short and direct.";
-    }
-
-    if (replyLength === "Detailed") {
-      return "Make the reply more complete, but not overly long.";
-    }
-
-    return "Make the reply clear and moderately detailed.";
-  };
-
-  const buildPrompt = ({ mode, tones, prompt, context, replyLength }) => {
-    const modeInstruction = mode === "Rewrite Draft"
-      ? "Rewrite the user's draft reply. Preserve the original meaning and important details."
-      : "Write a reply to the received message.";
-    const contextInstruction = context
-      ? `Optional context to improve accuracy:\n${context}`
-      : "No optional context was provided.";
-
-    return [
-      "You are Norn Draft, a careful assistant that writes polished, copy-ready replies.",
-      modeInstruction,
-      `Use these tones: ${tones.join(", ")}.`,
-      getLengthGuidance(replyLength),
-      "Use optional context only to improve accuracy.",
-      "Do not invent facts not provided by the user.",
-      "Return only the reply text, without labels, markdown fences, or explanations.",
-      "",
-      `Mode: ${mode}`,
-      contextInstruction,
-      "",
-      mode === "Rewrite Draft" ? "User's draft reply:" : "Message to reply to:",
-      prompt
-    ].join("\n");
   };
 
   const resolveGeminiModel = (settings) => {
@@ -775,9 +816,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const aiPrompt = buildPrompt({
+    const selectedCustomPreset = getSelectedCustomPreset();
+    const aiPrompt = window.NornDraftTonePresets.buildPrompt({
       mode: selectedMode,
       tones: getSelectedTones(),
+      customInstruction: selectedCustomPreset?.instruction || "",
       prompt,
       context,
       replyLength: currentSettings.replyLength
@@ -949,6 +992,8 @@ document.addEventListener("DOMContentLoaded", () => {
     chip.addEventListener("click", () => toggleTone(chip));
   });
 
+  customPresetSelect.addEventListener("change", selectCustomPreset);
+
   modeOptions.forEach((option) => {
     option.addEventListener("click", () => selectMode(option));
   });
@@ -956,7 +1001,24 @@ document.addEventListener("DOMContentLoaded", () => {
   promptInput.addEventListener("input", scheduleDraftSave);
   contextInput.addEventListener("input", scheduleDraftSave);
 
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes[PRESET_STORAGE_KEY]) {
+      return;
+    }
+
+    const previousPresetId = selectedPresetId;
+    loadCustomPresets().then(() => {
+      if (previousPresetId && !selectedPresetId) {
+        selectedTones = [getFallbackTone()];
+        syncToneChips();
+        saveDraftState();
+        setStatus("The selected custom preset was removed, so the default built-in tone is active.", "validation");
+      }
+    });
+  });
+
   loadSettings()
+    .then(loadCustomPresets)
     .then(loadDraftState)
     .then(loadReplyHistory)
     .then(() => {

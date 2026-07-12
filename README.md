@@ -2,11 +2,13 @@
 
 Norn Draft is a lightweight Manifest V3 browser extension for drafting polished AI-generated replies with tone presets and your own Gemini or OpenAI API key.
 
-## V1.6 features
+## V1.7 features
 
 - Generate a reply to a message, question, email, or comment
 - Rewrite an existing draft reply
 - Select one or more tones: Professional, Friendly, Empathetic, Instructional, Short, and Detailed
+- Create, edit, and delete local custom tone presets with reusable style guidance
+- Select a custom preset from the popup when drafting or rewriting
 - Add optional context/details for names, dates, deadlines, case numbers, or background
 - Generate with Gemini or OpenAI using your own provider-specific API key
 - Choose Gemini and OpenAI model presets or use custom model names
@@ -80,7 +82,7 @@ Extension icons are generated from `icons/norn-draft-updated.png` and wired into
 
 ## About
 
-Norn Draft 1.6 is developed by Mark Dalmacio (`mjdaldev`). Contact: [mjdaldev@gmail.com](mailto:mjdaldev@gmail.com).
+Norn Draft 1.7 is developed by Mark Dalmacio (`mjdaldev`). Contact: [mjdaldev@gmail.com](mailto:mjdaldev@gmail.com).
 
 Norn Draft only processes content when you explicitly request a draft or rewrite. AI requests may be sent to the external provider you select.
 

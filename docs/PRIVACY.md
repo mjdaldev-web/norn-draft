@@ -1,12 +1,13 @@
 # Norn Draft Privacy
 
-Norn Draft V1.6 is designed to stay lightweight and explicit about what it uses.
+Norn Draft V1.7 is designed to stay lightweight and explicit about what it uses.
 
 ## What the Extension Uses
 
 - Text you type or paste into the popup
 - Optional context/details you type into the popup
 - Tone, provider, model, provider-specific API key, and reply length settings saved in this browser
+- Custom tone presets you create, including their names and style instructions, saved locally in this browser
 - Optional local reply history if you enable it in Settings
 
 ## API Key Storage

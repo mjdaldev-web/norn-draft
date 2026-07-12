@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Norn Draft",
-  "version": "1.6.0",
-  "description": "Draft and rewrite polished AI replies with tone presets using your own Gemini or OpenAI API key.",
+  "version": "1.7.0",
+  "description": "Draft and rewrite polished AI replies with built-in and custom tone presets using your own Gemini or OpenAI API key.",
   "action": {
     "default_title": "Norn Draft",
     "default_popup": "popup/popup.html",

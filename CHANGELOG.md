@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.0
+
+- Added local custom tone presets with create, edit, delete, validation, and delete confirmation flows.
+- Added popup selection for custom presets while preserving all built-in tone chips and their existing behavior.
+- Added versioned local preset storage with malformed-record repair and safe fallback after preset deletion.
+
 ## 1.6.0
 
 - Refreshed Norn Draft branding with the updated bundled logo and runtime icon sizes.

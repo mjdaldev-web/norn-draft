@@ -21,7 +21,8 @@
 
       <section class="tone" aria-labelledby="tone-title">
         <h2 id="tone-title">Tone</h2>
-        <div class="tone__chips" role="group" aria-label="Reply tones">
+        <p class="tone__group-label">Built-in tones</p>
+        <div class="tone__chips" role="group" aria-label="Built-in reply tones">
           <button class="tone-chip is-selected" type="button" role="checkbox" aria-checked="true" data-tone="Professional">
             Professional
           </button>
@@ -41,6 +42,13 @@
             Detailed
           </button>
         </div>
+        <label class="custom-preset-select" for="custom-preset">
+          <span>Custom preset</span>
+          <select id="custom-preset" aria-describedby="custom-preset-help">
+            <option value="">No custom preset selected</option>
+          </select>
+        </label>
+        <p id="custom-preset-help" class="tone__help">Custom presets are managed in Settings. Selecting one uses it instead of the built-in tone chips.</p>
       </section>
 
       <section class="mode" aria-labelledby="mode-title">
@@ -95,6 +103,7 @@
       <p class="privacy-note">Norn Draft processes content only when you request a draft or rewrite. AI requests are sent to your selected provider.</p>
     </main>
 
+    <script src="../shared/tone-presets.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

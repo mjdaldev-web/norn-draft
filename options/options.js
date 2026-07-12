@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const replyHistoryStorageKey = "nornDraftReplyHistory";
   const popupDraftStorageKey = "nornDraftPopupDraftState";
+  const presetStorageKey = window.NornDraftTonePresets.PRESET_STORAGE_KEY;
 
   const form = document.querySelector("#settings-form");
   const tabButtons = Array.from(document.querySelectorAll("[data-tab]"));
@@ -37,6 +38,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const historyLimitSelect = document.querySelector("#history-limit");
   const clearHistoryButton = document.querySelector("#clear-history");
   const historyList = document.querySelector("#options-history-list");
+  const addPresetButton = document.querySelector("#add-preset");
+  const presetList = document.querySelector("#preset-list");
+  const presetEmptyState = document.querySelector("#preset-empty-state");
+  const presetEditor = document.querySelector("#preset-editor");
+  const presetEditorTitle = document.querySelector("#preset-editor-title");
+  const presetNameInput = document.querySelector("#preset-name");
+  const presetInstructionInput = document.querySelector("#preset-instruction");
+  const presetCharacterCount = document.querySelector("#preset-character-count");
+  const presetEditorStatus = document.querySelector("#preset-editor-status");
+  const savePresetButton = document.querySelector("#save-preset");
+  const cancelPresetButton = document.querySelector("#cancel-preset");
   const status = document.querySelector("#status");
 
   const storage = chrome.storage.local;
@@ -44,6 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentSettings = { ...defaults };
   let activeProvider = defaults.provider;
   let replyHistory = [];
+  let customPresets = [];
+  let editingPresetId = "";
   const geminiModelPresets = ["auto", "flash-lite", "flash", "custom"];
   const openaiModelPresets = ["recommended", "mini", "quality", "custom"];
   const validHistoryDetailLevels = ["basic", "detailed"];
@@ -226,6 +240,137 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       return entities[character];
+    });
+  };
+
+  const getDefaultPopupTone = () => {
+    return validTones.includes(currentSettings.defaultTone) ? currentSettings.defaultTone : defaults.defaultTone;
+  };
+
+  const setPresetEditorMessage = (message, isError = false) => {
+    presetEditorStatus.textContent = message;
+    presetEditorStatus.classList.toggle("is-error", isError);
+  };
+
+  const updatePresetEditorValidity = () => {
+    const validation = window.NornDraftTonePresets.validatePresetInput({
+      name: presetNameInput.value,
+      instruction: presetInstructionInput.value,
+      presets: customPresets,
+      excludeId: editingPresetId
+    });
+
+    presetCharacterCount.textContent = `${presetInstructionInput.value.length} / ${window.NornDraftTonePresets.MAX_PRESET_INSTRUCTION_LENGTH} characters`;
+    savePresetButton.disabled = !validation.ok;
+
+    if (presetNameInput.value.trim() || presetInstructionInput.value.trim()) {
+      setPresetEditorMessage(validation.ok ? "" : validation.message, !validation.ok);
+    } else {
+      setPresetEditorMessage("");
+    }
+
+    return validation;
+  };
+
+  const closePresetEditor = () => {
+    editingPresetId = "";
+    presetEditor.hidden = true;
+    presetNameInput.value = "";
+    presetInstructionInput.value = "";
+    presetCharacterCount.textContent = `0 / ${window.NornDraftTonePresets.MAX_PRESET_INSTRUCTION_LENGTH} characters`;
+    setPresetEditorMessage("");
+    savePresetButton.disabled = true;
+  };
+
+  const openPresetEditor = (preset) => {
+    editingPresetId = preset?.id || "";
+    presetEditorTitle.textContent = preset ? "Edit custom preset" : "New custom preset";
+    presetNameInput.value = preset?.name || "";
+    presetInstructionInput.value = preset?.instruction || "";
+    presetEditor.hidden = false;
+    updatePresetEditorValidity();
+    presetNameInput.focus();
+  };
+
+  const renderPresetList = () => {
+    presetList.replaceChildren();
+    presetEmptyState.hidden = customPresets.length > 0;
+
+    customPresets.forEach((preset) => {
+      const card = document.createElement("article");
+      card.className = "preset-card";
+      card.dataset.presetId = preset.id;
+
+      const header = document.createElement("div");
+      header.className = "preset-card__header";
+      const name = document.createElement("h3");
+      name.className = "preset-card__name";
+      name.textContent = preset.name;
+      const actions = document.createElement("div");
+      actions.className = "preset-card__actions";
+
+      [
+        ["edit", "Edit"],
+        ["delete", "Delete"]
+      ].forEach(([action, label]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "button button--secondary";
+        button.dataset.presetAction = action;
+        button.textContent = label;
+        button.setAttribute("aria-label", `${label} ${preset.name}`);
+        actions.append(button);
+      });
+
+      const instruction = document.createElement("p");
+      instruction.className = "preset-card__instruction";
+      instruction.textContent = preset.instruction;
+      header.append(name, actions);
+      card.append(header, instruction);
+      presetList.append(card);
+    });
+  };
+
+  const saveCustomPresets = async () => {
+    await storage.set({
+      [presetStorageKey]: {
+        schemaVersion: window.NornDraftTonePresets.PRESET_SCHEMA_VERSION,
+        presets: customPresets
+      }
+    });
+  };
+
+  const loadCustomPresets = async () => {
+    try {
+      const stored = await storage.get(presetStorageKey);
+      const result = window.NornDraftTonePresets.sanitizePresetCollection(stored[presetStorageKey]);
+      customPresets = result.collection.presets;
+
+      // Repair malformed version 1 records once without touching unrelated settings.
+      if (result.shouldRepair && result.isSupported) {
+        await storage.set({ [presetStorageKey]: result.collection });
+      }
+    } catch (error) {
+      customPresets = [];
+    }
+
+    renderPresetList();
+  };
+
+  const clearDeletedPresetFromPopupDraft = async (presetId) => {
+    const stored = await storage.get(popupDraftStorageKey);
+    const draft = stored[popupDraftStorageKey];
+
+    if (!draft || typeof draft !== "object" || draft.selectedPresetId !== presetId) {
+      return;
+    }
+
+    await storage.set({
+      [popupDraftStorageKey]: {
+        ...draft,
+        selectedPresetId: "",
+        selectedTones: [getDefaultPopupTone()]
+      }
     });
   };
 
@@ -464,6 +609,97 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  addPresetButton.addEventListener("click", () => {
+    openPresetEditor(null);
+  });
+
+  cancelPresetButton.addEventListener("click", () => {
+    closePresetEditor();
+  });
+
+  presetNameInput.addEventListener("input", updatePresetEditorValidity);
+  presetInstructionInput.addEventListener("input", updatePresetEditorValidity);
+
+  savePresetButton.addEventListener("click", async () => {
+    const validation = updatePresetEditorValidity();
+
+    if (!validation.ok) {
+      setPresetEditorMessage(validation.message, true);
+      return;
+    }
+
+    const existingPreset = customPresets.find((preset) => preset.id === editingPresetId);
+    const nextPreset = existingPreset
+      ? window.NornDraftTonePresets.updatePreset(existingPreset, validation)
+      : window.NornDraftTonePresets.createPreset(validation);
+
+    customPresets = existingPreset
+      ? customPresets.map((preset) => preset.id === existingPreset.id ? nextPreset : preset)
+      : [...customPresets, nextPreset];
+
+    try {
+      await saveCustomPresets();
+      renderPresetList();
+      closePresetEditor();
+      setStatus(existingPreset ? "Custom preset updated locally." : "Custom preset saved locally.", "success");
+    } catch (error) {
+      customPresets = existingPreset
+        ? customPresets.map((preset) => preset.id === nextPreset.id ? existingPreset : preset)
+        : customPresets.filter((preset) => preset.id !== nextPreset.id);
+      renderPresetList();
+      setPresetEditorMessage("Custom preset could not be saved. Please try again.", true);
+    }
+  });
+
+  presetList.addEventListener("click", async (event) => {
+    const actionButton = event.target.closest("[data-preset-action]");
+
+    if (!actionButton) {
+      return;
+    }
+
+    const card = actionButton.closest("[data-preset-id]");
+    const preset = customPresets.find((entry) => entry.id === card?.dataset.presetId);
+
+    if (!preset) {
+      setStatus("That custom preset is no longer available.", "validation");
+      return;
+    }
+
+    if (actionButton.dataset.presetAction === "edit") {
+      openPresetEditor(preset);
+      return;
+    }
+
+    if (!window.confirm(`Delete “${preset.name}”? This cannot be undone.`)) {
+      return;
+    }
+
+    const previousPresets = customPresets;
+    customPresets = customPresets.filter((entry) => entry.id !== preset.id);
+
+    try {
+      await saveCustomPresets();
+    } catch (error) {
+      customPresets = previousPresets;
+      renderPresetList();
+      setStatus("Custom preset could not be deleted. Please try again.", "error");
+      return;
+    }
+
+    renderPresetList();
+    if (editingPresetId === preset.id) {
+      closePresetEditor();
+    }
+
+    try {
+      await clearDeletedPresetFromPopupDraft(preset.id);
+      setStatus("Custom preset deleted.", "success");
+    } catch (error) {
+      setStatus("Custom preset deleted. The popup will reset its selection when it next opens.", "success");
+    }
+  });
+
   toggleApiKeyButton.addEventListener("click", () => {
     const isHidden = apiKeyInput.type === "password";
     apiKeyInput.type = isHidden ? "text" : "password";
@@ -593,6 +829,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   loadSettings()
+    .then(loadCustomPresets)
     .then(loadReplyHistory)
     .then(() => {
       setActiveTab("general");
