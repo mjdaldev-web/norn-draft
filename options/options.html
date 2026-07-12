@@ -199,13 +199,31 @@
             <ul>
               <li>Gemini and OpenAI API keys are stored separately and locally in this browser using chrome.storage.local.</li>
               <li>API keys are never saved in reply history and are never sent to the other provider.</li>
-              <li>Norn Draft V1.5 does not read the current page.</li>
-              <li>Only popup text, selected tones, mode, and optional context are sent to the chosen provider when generating.</li>
+              <li>Norn Draft only processes content when you explicitly request a draft or rewrite.</li>
+              <li>When you generate, the requested content and selected settings are sent to the chosen AI provider's API.</li>
               <li>Local reply history is off by default and stored locally only when enabled.</li>
               <li>Basic history saves generated replies and metadata only.</li>
               <li>Detailed history also saves the original message/draft and optional context locally if you explicitly select it.</li>
               <li>API keys, raw API responses, page URLs, page titles, clipboard data, and browser page content are never saved in history.</li>
             </ul>
+          </section>
+
+          <section class="settings__panel about-panel" aria-labelledby="about-title">
+            <div class="about-panel__identity">
+              <img class="about-panel__logo" src="../icons/icon128.png" alt="Norn Draft logo" width="64" height="64" />
+              <div>
+                <p class="about-panel__eyebrow">About</p>
+                <h2 id="about-title">Norn Draft</h2>
+                <p class="about-panel__version">Version 1.6</p>
+              </div>
+            </div>
+            <dl class="about-panel__details">
+              <div><dt>Developed by</dt><dd>Mark Dalmacio</dd></div>
+              <div><dt>Handle</dt><dd>mjdaldev</dd></div>
+              <div><dt>Email</dt><dd><a href="mailto:mjdaldev@gmail.com">mjdaldev@gmail.com</a></dd></div>
+              <div><dt>Copyright</dt><dd>© 2026 Mark Dalmacio</dd></div>
+            </dl>
+            <p class="about-panel__privacy">Norn Draft only processes content when you explicitly request a draft or rewrite. AI requests may be sent to the external provider you select.</p>
           </section>
         </div>
 

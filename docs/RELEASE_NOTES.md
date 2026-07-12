@@ -1,6 +1,12 @@
-# Norn Draft V1.5.0 Release Readiness Notes
+# Norn Draft V1.6.0 Release Readiness Notes
 
-Norn Draft V1.5 is the current release-ready browser extension state before creating the final V1.5 package.
+Norn Draft V1.6 is the current release-ready browser extension state before creating the final V1.6 package.
+
+## Branding
+
+- Refreshed the bundled Norn Draft logo and generated 16, 32, 48, and 128 pixel runtime icons.
+- Added compact About information to Settings > Privacy for Mark Dalmacio (`mjdaldev`).
+- Updated privacy wording to clarify that content is processed only after an explicit draft or rewrite request and may be sent to the selected AI provider.
 
 ## Highlights
 
@@ -36,7 +42,7 @@ Norn Draft V1.5 is the current release-ready browser extension state before crea
 
 ## Privacy Notes
 
-- Norn Draft V1.5 does not read the current page.
+- Norn Draft only processes content after an explicit draft or rewrite request and does not read the current page.
 - Only text typed into the popup, selected tones, selected mode, optional context, and reply length guidance are sent to the selected AI provider when generating.
 - Gemini and OpenAI API keys are stored separately and locally in this browser.
 - API keys are never saved in history and are never sent to the other provider.
@@ -46,7 +52,7 @@ Norn Draft V1.5 is the current release-ready browser extension state before crea
 
 ## Current Limitations
 
-- V1.5 does not read webpage content automatically.
+- V1.6 does not read webpage content automatically.
 - Provider generation depends on the user's API key, project access, quota, and selected model.
 - Local history and popup draft state stay on this browser only.
 
@@ -57,7 +63,7 @@ Norn Draft V1.5 is the current release-ready browser extension state before crea
 - Local history is capped to the configured 10 or 20 latest replies to keep popup and Settings rendering responsive.
 - Detailed history entries use scrollable text blocks so long saved replies or context do not expand the whole page indefinitely.
 
-## V1.5 Manual Test Checklist
+## V1.6 Manual Test Checklist
 
 - Manifest V3 configured
 - Permissions limited to `storage`, Gemini API host access, and OpenAI API host access

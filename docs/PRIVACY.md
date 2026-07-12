@@ -1,6 +1,6 @@
 # Norn Draft Privacy
 
-Norn Draft V1.5 is designed to stay lightweight and explicit about what it uses.
+Norn Draft V1.6 is designed to stay lightweight and explicit about what it uses.
 
 ## What the Extension Uses
 
@@ -36,6 +36,8 @@ You can delete individual history items or clear all saved reply history from Se
 ## External Requests
 
 When Gemini or OpenAI is selected and an API key is saved, Norn Draft sends the text you typed in the popup, selected tones, selected mode, optional context, and reply length guidance to the chosen AI provider only after you click **Generate Reply**.
+
+Norn Draft only processes content when you explicitly request a draft or rewrite. AI requests may be sent to the external provider you select; processing is not represented as entirely local.
 
 ## No Tracking
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0
+
+- Refreshed Norn Draft branding with the updated bundled logo and runtime icon sizes.
+- Added About information for Mark Dalmacio (`mjdaldev`) to Settings > Privacy.
+- Updated privacy wording to accurately describe explicit processing and external AI provider requests.
+- Confirmed extension permissions and draft-generation behavior are unchanged.
+
 ## 1.5.0
 
 - Prepared V1.5 release readiness with current Gemini and OpenAI provider support.
