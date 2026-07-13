@@ -1,24 +1,28 @@
 "use strict";
 
 importScripts("shared/selection-handoff.js");
+importScripts("shared/context-menu-handler.js");
 
 const MENU_ID = "norn-draft-open-selection";
 const WINDOW_ID_STORAGE_KEY = "nornDraftSelectionWindowId";
-const HANDOFF = NornDraftSelectionHandoff;
+const CONTEXT_MENU = NornDraftContextMenu;
 const sessionStorage = chrome.storage.session;
 
-const logContextMenuError = (error) => {
-  console.warn("Norn Draft context-menu setup failed.", error?.message || "Unknown browser error");
-};
-
 const registerContextMenu = () => {
-  chrome.contextMenus.removeAll()
+  Promise.resolve()
+    .then(() => chrome.contextMenus.removeAll())
     .then(() => chrome.contextMenus.create({
       id: MENU_ID,
       title: "Open selection in Norn Draft",
       contexts: ["selection"]
     }))
-    .catch(logContextMenuError);
+    .catch((error) => {
+      console.error("Norn Draft context-menu registration failed.", {
+        operation: "register context menu",
+        menuId: MENU_ID,
+        error: error?.message || "Unknown browser error"
+      });
+    });
 };
 
 const getExistingWindowId = async () => {
@@ -56,22 +60,18 @@ const openNornDraftWindow = async () => {
     }
   }
 
-  try {
-    const createdWindow = await chrome.windows.create({
-      url: chrome.runtime.getURL("popup/popup.html"),
-      type: "popup",
-      width: 420,
-      height: 760,
-      focused: true
-    });
+  const createdWindow = await chrome.windows.create({
+    url: chrome.runtime.getURL("popup/popup.html"),
+    type: "popup",
+    width: 420,
+    height: 760,
+    focused: true
+  });
 
-    if (typeof createdWindow?.id === "number") {
-      if (sessionStorage) {
-        await sessionStorage.set({ [WINDOW_ID_STORAGE_KEY]: createdWindow.id });
-      }
+  if (typeof createdWindow?.id === "number") {
+    if (sessionStorage) {
+      await sessionStorage.set({ [WINDOW_ID_STORAGE_KEY]: createdWindow.id });
     }
-  } catch (error) {
-    console.warn("Norn Draft could not open its extension window.");
   }
 };
 
@@ -90,21 +90,11 @@ chrome.windows.onRemoved.addListener((windowId) => {
   }).catch(() => {});
 });
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== MENU_ID || !Array.isArray(info.contexts) || !info.contexts.includes("selection")) {
-    return;
-  }
-
-  const handoff = HANDOFF.createSelectionHandoff({ selectionText: info.selectionText });
-
-  if (!handoff) {
-    return;
-  }
-
-  try {
-    await chrome.storage.local.set({ [HANDOFF.SELECTION_HANDOFF_STORAGE_KEY]: handoff });
-    await openNornDraftWindow();
-  } catch (error) {
-    console.warn("Norn Draft could not prepare the selected text.");
-  }
+chrome.contextMenus.onClicked.addListener((info) => {
+  CONTEXT_MENU.handleSelectionContextMenuClick({
+    info,
+    storage: chrome.storage.local,
+    openWindow: openNornDraftWindow,
+    logger: console
+  });
 });

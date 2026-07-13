@@ -556,11 +556,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const stored = await chrome.storage.local.get(SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY);
+        const storedValue = stored[SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY];
         handoff = SELECTION_HANDOFF.sanitizeSelectionHandoff(
-          stored[SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY]
+          storedValue
         );
 
-        if (stored[SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY]) {
+        if (storedValue && !handoff) {
           await chrome.storage.local.remove(SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY);
         }
       } catch (error) {
@@ -587,17 +588,36 @@ document.addEventListener("DOMContentLoaded", () => {
           action = "append";
           nextText = `${existingText.trimEnd()}\n\n${handoff.text}`;
         } else {
+          action = "cancel";
+        }
+      }
+
+      try {
+        const result = await SELECTION_HANDOFF.completePendingSelection({
+          action,
+          text: nextText,
+          insert: async (text) => {
+            promptInput.value = text;
+            generatedReply = "";
+            setOutput(initialOutputText);
+            scheduleDraftSave();
+            promptInput.focus();
+          },
+          remove: () => chrome.storage.local.remove(SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY)
+        });
+
+        if (!result.inserted) {
           setStatus("Webpage selection was not inserted.", "validation");
           promptInput.focus();
           return;
         }
+      } catch (error) {
+        const cleanupMessage = action === "cancel"
+          ? "Webpage selection was not inserted, but temporary cleanup failed."
+          : "Webpage selection inserted, but temporary cleanup failed.";
+        setStatus(cleanupMessage, "error", { persist: true });
+        return;
       }
-
-      promptInput.value = nextText;
-      generatedReply = "";
-      setOutput(initialOutputText);
-      scheduleDraftSave();
-      promptInput.focus();
 
       const truncationMessage = handoff.wasTruncated
         ? ` The selection was shortened to ${SELECTION_HANDOFF.MAX_SELECTED_TEXT_LENGTH.toLocaleString()} characters.`

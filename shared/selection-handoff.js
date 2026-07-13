@@ -67,6 +67,17 @@
     };
   };
 
+  const completePendingSelection = async ({ action, text, insert, remove }) => {
+    if (action === "cancel") {
+      await remove();
+      return { inserted: false };
+    }
+
+    await insert(text);
+    await remove();
+    return { inserted: true };
+  };
+
   const api = {
     SELECTION_HANDOFF_STORAGE_KEY,
     SELECTION_HANDOFF_SCHEMA_VERSION,
@@ -74,7 +85,8 @@
     HANDOFF_MAX_AGE_MS,
     normalizeSelectedText,
     createSelectionHandoff,
-    sanitizeSelectionHandoff
+    sanitizeSelectionHandoff,
+    completePendingSelection
   };
 
   root.NornDraftSelectionHandoff = api;
