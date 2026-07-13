@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const POPUP_DRAFT_STORAGE_KEY = "nornDraftPopupDraftState";
   const REPLY_HISTORY_STORAGE_KEY = "nornDraftReplyHistory";
   const PRESET_STORAGE_KEY = window.NornDraftTonePresets.PRESET_STORAGE_KEY;
+  const SELECTION_HANDOFF = window.NornDraftSelectionHandoff;
   const DEFAULT_HISTORY_LIMIT = 10;
   const DEFAULT_SETTINGS = {
     provider: "Gemini",
@@ -58,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let customPresets = [];
   let statusTimeoutId = null;
   let saveDraftTimeoutId = null;
+  let pendingSelectionPromise = null;
 
   const getStatusDuration = (type, duration) => {
     if (duration !== undefined) {
@@ -544,6 +546,71 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const consumePendingSelection = () => {
+    if (pendingSelectionPromise) {
+      return pendingSelectionPromise;
+    }
+
+    pendingSelectionPromise = (async () => {
+      let handoff;
+
+      try {
+        const stored = await chrome.storage.local.get(SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY);
+        handoff = SELECTION_HANDOFF.sanitizeSelectionHandoff(
+          stored[SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY]
+        );
+
+        if (stored[SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY]) {
+          await chrome.storage.local.remove(SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY);
+        }
+      } catch (error) {
+        setStatus("The selected text could not be loaded.", "error");
+        return;
+      }
+
+      if (!handoff) {
+        return;
+      }
+
+      const existingText = promptInput.value;
+      let nextText = handoff.text;
+      let action = "replace";
+
+      if (existingText.trim()) {
+        const shouldReplace = window.confirm(
+          "Norn Draft already contains source text. Replace it with the webpage selection?"
+        );
+
+        if (shouldReplace) {
+          action = "replace";
+        } else if (window.confirm("Append the webpage selection below the existing source text?")) {
+          action = "append";
+          nextText = `${existingText.trimEnd()}\n\n${handoff.text}`;
+        } else {
+          setStatus("Webpage selection was not inserted.", "validation");
+          promptInput.focus();
+          return;
+        }
+      }
+
+      promptInput.value = nextText;
+      generatedReply = "";
+      setOutput(initialOutputText);
+      scheduleDraftSave();
+      promptInput.focus();
+
+      const truncationMessage = handoff.wasTruncated
+        ? ` The selection was shortened to ${SELECTION_HANDOFF.MAX_SELECTED_TEXT_LENGTH.toLocaleString()} characters.`
+        : "";
+      const actionMessage = action === "append" ? "appended" : "inserted";
+      setStatus(`Webpage selection ${actionMessage}. Review it before generating.${truncationMessage}`, "success", { persist: true });
+    })().finally(() => {
+      pendingSelectionPromise = null;
+    });
+
+    return pendingSelectionPromise;
+  };
+
   const resolveGeminiModel = (settings) => {
     const preset = settings.geminiModelPreset || DEFAULT_SETTINGS.geminiModelPreset;
 
@@ -1002,7 +1069,15 @@ document.addEventListener("DOMContentLoaded", () => {
   contextInput.addEventListener("input", scheduleDraftSave);
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local" || !changes[PRESET_STORAGE_KEY]) {
+    if (areaName !== "local") {
+      return;
+    }
+
+    if (changes[SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY]) {
+      consumePendingSelection();
+    }
+
+    if (!changes[PRESET_STORAGE_KEY]) {
       return;
     }
 
@@ -1020,6 +1095,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSettings()
     .then(loadCustomPresets)
     .then(loadDraftState)
+    .then(consumePendingSelection)
     .then(loadReplyHistory)
     .then(() => {
       setStatus("");

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.0
+
+- Added the “Open selection in Norn Draft” right-click action for highlighted webpage text.
+- Added a local, temporary handoff into the existing popup source field with review before generation.
+- Added safe length handling and protection for existing unsaved source text.
+- Confirmed the context-menu action does not make an automatic AI request or read page content beyond the selected text.
+
 ## 1.7.0
 
 - Added local custom tone presets with create, edit, delete, validation, and delete confirmation flows.

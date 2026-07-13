@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Norn Draft",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Draft and rewrite polished AI replies with built-in and custom tone presets using your own Gemini or OpenAI API key.",
   "action": {
     "default_title": "Norn Draft",
@@ -12,6 +12,9 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "options_ui": {
     "page": "options/options.html",
@@ -24,7 +27,8 @@
     "128": "icons/icon128.png"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "contextMenus"
   ],
   "host_permissions": [
     "https://generativelanguage.googleapis.com/*",

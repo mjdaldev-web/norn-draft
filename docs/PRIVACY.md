@@ -1,6 +1,6 @@
 # Norn Draft Privacy
 
-Norn Draft V1.7 is designed to stay lightweight and explicit about what it uses.
+Norn Draft V1.8 is designed to stay lightweight and explicit about what it uses.
 
 ## What the Extension Uses
 
@@ -8,6 +8,7 @@ Norn Draft V1.7 is designed to stay lightweight and explicit about what it uses.
 - Optional context/details you type into the popup
 - Tone, provider, model, provider-specific API key, and reply length settings saved in this browser
 - Custom tone presets you create, including their names and style instructions, saved locally in this browser
+- Highlighted webpage text only after you explicitly choose **Open selection in Norn Draft** from the browser context menu
 - Optional local reply history if you enable it in Settings
 
 ## API Key Storage
@@ -18,7 +19,9 @@ Norn Draft does not hardcode API keys, commit secrets, or display your API key i
 
 ## Page Content
 
-Norn Draft V1 does not read the current page, tabs, browsing history, cookies, or page content.
+Norn Draft does not monitor selections, read surrounding page content, inspect tabs, browsing history, cookies, or page HTML. The context-menu action receives only the browser-provided selected text after you explicitly invoke it.
+
+Selected text is stored in a short-lived local handoff record while Norn Draft opens. It is removed after the popup consumes it and is never stored in cloud or sync storage.
 
 ## Generated Replies
 
@@ -36,10 +39,10 @@ You can delete individual history items or clear all saved reply history from Se
 
 ## External Requests
 
-When Gemini or OpenAI is selected and an API key is saved, Norn Draft sends the text you typed in the popup, selected tones, selected mode, optional context, and reply length guidance to the chosen AI provider only after you click **Generate Reply**.
+When Gemini or OpenAI is selected and an API key is saved, Norn Draft sends the text you reviewed in the popup, selected tones or custom preset guidance, selected mode, optional context, and reply length guidance to the chosen AI provider only after you click **Generate Reply**.
 
 Norn Draft only processes content when you explicitly request a draft or rewrite. AI requests may be sent to the external provider you select; processing is not represented as entirely local.
 
 ## No Tracking
 
-Norn Draft V1 does not include analytics, tracking, ads, or external scripts.
+Norn Draft V1.8 does not include analytics, tracking, ads, or external scripts.
