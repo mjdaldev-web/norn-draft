@@ -1089,30 +1089,29 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       await saveDraftState();
       const currentWindow = await chrome.windows.getCurrent();
-      if (!chrome.sidePanel?.open) {
+      if (!chrome.sidePanel?.open || !Number.isInteger(currentWindow.id)) {
         throw new Error("Chrome Side Panel is unavailable.");
       }
+      console.debug(`Norn Draft side-panel attempt source=popup windowId=${currentWindow.id}`);
       await chrome.sidePanel.open({ windowId: currentWindow.id });
+      console.debug(`Norn Draft side-panel opened source=popup windowId=${currentWindow.id}`);
     } catch (error) {
-      console.error("Norn Draft side panel opening failed; requesting the extension window fallback.", {
-        operation: "open side panel from popup",
-        error: error?.message || "Unknown browser error"
-      });
+      const sidePanelMessage = window.NornDraftSidePanel.normalizeExtensionError(error);
       try {
         const currentWindow = await chrome.windows.getCurrent();
         const response = await chrome.runtime.sendMessage({
           type: "nornDraftOpenSidePanel",
-          windowId: currentWindow.id
+          windowId: currentWindow.id,
+          source: "popup-fallback",
+          sidePanelAlreadyAttempted: true,
+          sidePanelErrorMessage: sidePanelMessage
         });
         if (!response?.ok) {
           throw new Error(response?.error || "Workspace did not open.");
         }
         setStatus(response.opened === "window" ? "Opened the Norn Draft window fallback." : "Opened Norn Draft in the side panel.", "success");
       } catch (fallbackError) {
-        console.error("Norn Draft workspace fallback failed.", {
-          operation: "open workspace fallback from popup",
-          error: fallbackError?.message || "Unknown browser error"
-        });
+        console.error(`Norn Draft popup workspace fallback failed; side-panel: ${sidePanelMessage}; fallback: ${window.NornDraftSidePanel.normalizeExtensionError(fallbackError)}`);
         setStatus("Norn Draft could not open the side panel.", "error");
       }
     }

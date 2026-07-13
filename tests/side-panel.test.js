@@ -7,6 +7,13 @@ const sidePanel = require("../shared/side-panel.js");
   assert.equal(sidePanel.isSidePanelPreferred(true), true);
   assert.equal(sidePanel.isSidePanelPreferred("true"), false);
   assert.equal(sidePanel.isSidePanelPreferred(undefined), false);
+  assert.equal(sidePanel.normalizeExtensionError(new Error("Edge rejected the panel")), "Edge rejected the panel");
+  assert.equal(sidePanel.normalizeExtensionError("String failure"), "String failure");
+  assert.equal(sidePanel.normalizeExtensionError({ code: "EDGE_PANEL", status: 7 }), '{"code":"EDGE_PANEL","status":7}');
+  assert.equal(sidePanel.normalizeExtensionError({}), "Unknown browser error");
+  global.chrome = { runtime: { lastError: { message: "Runtime failure" } } };
+  assert.equal(sidePanel.normalizeExtensionError({}), "Runtime failure");
+  delete global.chrome;
 
   const calls = [];
   const action = { setPopup: async (value) => calls.push(["popup", value]) };
@@ -29,6 +36,7 @@ const sidePanel = require("../shared/side-panel.js");
   assert.equal(openedWindowId, 18);
   await assert.rejects(() => sidePanel.openSidePanel({ sidePanel: undefined, windowId: 18 }));
   await assert.rejects(() => sidePanel.openSidePanel({ sidePanel: { open: async () => {} }, windowId: undefined }));
+  await assert.rejects(() => sidePanel.openSidePanel({ sidePanel: { open: async () => {} }, windowId: 4.5 }));
 
   const createStorage = (initial) => {
     const values = { ...initial };

@@ -9,7 +9,13 @@ const createLogger = () => {
   return {
     entries,
     error(message, details) {
-      entries.push({ message, details });
+      entries.push({ level: "error", message, details });
+    },
+    warn(message, details) {
+      entries.push({ level: "warn", message, details });
+    },
+    debug(message, details) {
+      entries.push({ level: "debug", message, details });
     }
   };
 };
@@ -68,19 +74,37 @@ const createStorage = () => {
     storage: orderingStorage,
     panelOpenPromise,
     openFallbackWindow: async () => { fallbackOpened += 1; },
-    logger: createLogger()
+    logger: createLogger(),
+    windowId: 41
   }), true);
   assert.equal(fallbackOpened, 0);
 
   let rejectedFallbackOpened = 0;
+  const fallbackLogger = createLogger();
   assert.equal(await contextMenu.finishSelectionContextMenuAction({
     handoff: panelHandoff,
     storage: createStorage(),
     panelOpenPromise: Promise.reject(new Error("side panel rejected")),
     openFallbackWindow: async () => { rejectedFallbackOpened += 1; },
-    logger: createLogger()
+    logger: fallbackLogger,
+    windowId: 41
   }), true);
   assert.equal(rejectedFallbackOpened, 1);
+  assert.equal(fallbackLogger.entries.some((entry) => entry.level === "error"), false);
+  assert.equal(fallbackLogger.entries.some((entry) => entry.level === "warn"), true);
+  assert.equal(JSON.stringify(fallbackLogger.entries).includes("[object Object]"), false);
+
+  const failedFallbackLogger = createLogger();
+  assert.equal(await contextMenu.finishSelectionContextMenuAction({
+    handoff: panelHandoff,
+    storage: createStorage(),
+    panelOpenPromise: Promise.reject({ code: "EDGE_PANEL" }),
+    openFallbackWindow: async () => { throw new Error("window blocked"); },
+    logger: failedFallbackLogger,
+    windowId: undefined
+  }), false);
+  assert.equal(failedFallbackLogger.entries.some((entry) => entry.level === "error"), true);
+  assert.equal(JSON.stringify(failedFallbackLogger.entries).includes("[object Object]"), false);
 
   const ignoredStorage = createStorage();
   const ignored = await contextMenu.handleSelectionContextMenuClick({
@@ -122,7 +146,7 @@ const createStorage = () => {
   });
   assert.equal(failingLogger.entries.length, 1);
   assert.equal(JSON.stringify(failingLogger.entries).includes("Do not log this text"), false);
-  assert.equal(failingLogger.entries[0].details.selectedTextLength, 20);
+  assert.equal(failingLogger.entries[0].message.includes("selectedTextLength=20"), true);
 
   const unicode = handoff.createSelectionHandoff({
     selectionText: "😀".repeat(handoff.MAX_SELECTED_TEXT_LENGTH + 10),

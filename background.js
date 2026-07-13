@@ -12,7 +12,7 @@ const CONTEXT_MENU = NornDraftContextMenu;
 const SIDE_PANEL = NornDraftSidePanel;
 const sessionStorage = chrome.storage.session;
 
-const getErrorMessage = (error) => error?.message || "Unknown browser error";
+const getErrorMessage = (error) => SIDE_PANEL.normalizeExtensionError(error);
 
 const registerContextMenu = () => {
   Promise.resolve()
@@ -23,11 +23,7 @@ const registerContextMenu = () => {
       contexts: ["selection"]
     }))
     .catch((error) => {
-      console.error("Norn Draft context-menu registration failed.", {
-        operation: "register context menu",
-        menuId: MENU_ID,
-        error: getErrorMessage(error)
-      });
+      console.error(`Norn Draft context-menu registration failed: ${getErrorMessage(error)}`);
     });
 };
 
@@ -46,10 +42,7 @@ const configureToolbarBehavior = async () => {
       logger: console
     });
   } catch (error) {
-    console.error("Norn Draft toolbar behavior could not be configured.", {
-      operation: "configure side-panel toolbar behavior",
-      error: getErrorMessage(error)
-    });
+    console.error(`Norn Draft toolbar behavior could not be configured: ${getErrorMessage(error)}`);
   }
 };
 
@@ -107,17 +100,40 @@ const openNornDraftSidePanel = async (windowId) => {
 
 const openNornDraftWorkspace = async (info = {}) => {
   const windowId = info?.tab?.windowId ?? info?.windowId;
+  const source = typeof info?.source === "string" ? info.source : "extension-ui";
+
+  if (info?.sidePanelAlreadyAttempted === true) {
+    const sidePanelMessage = typeof info.sidePanelErrorMessage === "string" && info.sidePanelErrorMessage
+      ? info.sidePanelErrorMessage
+      : "Unknown browser error";
+
+    try {
+      await openNornDraftWindow();
+    } catch (fallbackError) {
+      console.error(`Norn Draft workspace opening failed source=${source} windowId=${Number.isInteger(windowId) ? windowId : "invalid"}; side-panel: ${sidePanelMessage}; fallback: ${getErrorMessage(fallbackError)}`);
+      throw fallbackError;
+    }
+
+    console.warn(`Norn Draft side panel could not open; using fallback source=${source} windowId=${Number.isInteger(windowId) ? windowId : "invalid"}: ${sidePanelMessage}`);
+    return { opened: "window" };
+  }
 
   try {
+    console.debug(`Norn Draft side-panel attempt source=${source} windowId=${Number.isInteger(windowId) ? windowId : "invalid"}`);
     await openNornDraftSidePanel(windowId);
+    console.debug(`Norn Draft side-panel opened source=${source} windowId=${windowId}`);
     return { opened: "sidePanel" };
-  } catch (error) {
-    console.error("Norn Draft side panel could not open; using the extension window fallback.", {
-      operation: "open side panel",
-      windowId: typeof windowId === "number" ? windowId : "unknown",
-      error: getErrorMessage(error)
-    });
-    await openNornDraftWindow();
+  } catch (sidePanelError) {
+    const sidePanelMessage = getErrorMessage(sidePanelError);
+
+    try {
+      await openNornDraftWindow();
+    } catch (fallbackError) {
+      console.error(`Norn Draft workspace opening failed source=${source} windowId=${Number.isInteger(windowId) ? windowId : "invalid"}; side-panel: ${sidePanelMessage}; fallback: ${getErrorMessage(fallbackError)}`);
+      throw fallbackError;
+    }
+
+    console.warn(`Norn Draft side panel could not open; using fallback source=${source} windowId=${Number.isInteger(windowId) ? windowId : "invalid"}: ${sidePanelMessage}`);
     return { opened: "window" };
   }
 };
@@ -171,6 +187,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     storage: chrome.storage.local,
     panelOpenPromise,
     openFallbackWindow: openNornDraftWindow,
+    source: "context-menu",
+    windowId,
     logger: console
   });
 });
@@ -181,13 +199,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   const windowId = typeof message.windowId === "number" ? message.windowId : sender?.tab?.windowId;
-  openNornDraftWorkspace({ windowId })
+  openNornDraftWorkspace({
+    windowId,
+    source: message.source || "popup-fallback",
+    sidePanelAlreadyAttempted: message.sidePanelAlreadyAttempted === true,
+    sidePanelErrorMessage: message.sidePanelErrorMessage
+  })
     .then((result) => sendResponse({ ok: true, ...result }))
     .catch((error) => {
-      console.error("Norn Draft workspace opening failed.", {
-        operation: "open workspace from extension UI",
-        error: getErrorMessage(error)
-      });
+      console.error(`Norn Draft workspace opening failed: ${getErrorMessage(error)}`);
       sendResponse({ ok: false, error: "Norn Draft could not open its workspace." });
     });
   return true;

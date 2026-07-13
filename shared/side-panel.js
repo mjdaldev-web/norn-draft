@@ -7,7 +7,40 @@
 
   const isSidePanelPreferred = (value) => value === true;
 
-  const getErrorMessage = (error) => error?.message || "Unknown browser error";
+  const normalizeExtensionError = (error, fallbackMessage = "Unknown browser error") => {
+    if (typeof error?.message === "string" && error.message.trim()) {
+      return error.message.trim();
+    }
+
+    const lastErrorMessage = root.chrome?.runtime?.lastError?.message;
+    if (typeof lastErrorMessage === "string" && lastErrorMessage.trim()) {
+      return lastErrorMessage.trim();
+    }
+
+    if (typeof error === "string" && error.trim()) {
+      return error.trim();
+    }
+
+    if (error && typeof error === "object") {
+      const details = {};
+      ["name", "code", "status", "reason"].forEach((key) => {
+        if (typeof error[key] === "string" || typeof error[key] === "number") {
+          details[key] = error[key];
+        }
+      });
+      const serialized = JSON.stringify(details);
+
+      if (serialized && serialized !== "{}") {
+        return serialized;
+      }
+    }
+
+    return fallbackMessage;
+  };
+
+  const logError = (logger, message, error) => {
+    logger.error(`${message}: ${normalizeExtensionError(error)}`);
+  };
 
   const migrateSidePanelPreference = async ({ storage, logger = console }) => {
     try {
@@ -36,10 +69,7 @@
       await storage.remove(LEGACY_SIDE_PANEL_PREFERENCE_KEY);
       return legacyValue;
     } catch (error) {
-      logger.error("Norn Draft side-panel preference migration failed.", {
-        operation: "migrate side-panel preference",
-        error: getErrorMessage(error)
-      });
+      logError(logger, "Norn Draft side-panel preference migration failed", error);
       return false;
     }
   };
@@ -59,20 +89,14 @@
       try {
         await sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
       } catch (error) {
-        logger.error("Norn Draft side-panel toolbar behavior could not be disabled.", {
-          operation: "disable side-panel toolbar behavior",
-          error: getErrorMessage(error)
-        });
+        logError(logger, "Norn Draft side-panel toolbar behavior could not be disabled", error);
         throw error;
       }
 
       try {
         await action.setPopup({ popup: popupPath });
       } catch (error) {
-        logger.error("Norn Draft action popup could not be restored.", {
-          operation: "restore action popup",
-          error: getErrorMessage(error)
-        });
+        logError(logger, "Norn Draft action popup could not be restored", error);
         throw error;
       }
 
@@ -82,27 +106,18 @@
     try {
       await action.setPopup({ popup: "" });
     } catch (error) {
-      logger.error("Norn Draft action popup could not be removed.", {
-        operation: "remove action popup",
-        error: getErrorMessage(error)
-      });
+      logError(logger, "Norn Draft action popup could not be removed", error);
       throw error;
     }
 
     try {
       await sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
     } catch (error) {
-      logger.error("Norn Draft side-panel toolbar behavior could not be enabled.", {
-        operation: "enable side-panel toolbar behavior",
-        error: getErrorMessage(error)
-      });
+      logError(logger, "Norn Draft side-panel toolbar behavior could not be enabled", error);
       try {
         await action.setPopup({ popup: popupPath });
       } catch (restoreError) {
-        logger.error("Norn Draft action popup rollback failed.", {
-          operation: "rollback action popup",
-          error: getErrorMessage(restoreError)
-        });
+        logError(logger, "Norn Draft action popup rollback failed", restoreError);
       }
       throw error;
     }
@@ -111,7 +126,7 @@
   };
 
   const openSidePanel = ({ sidePanel, windowId }) => {
-    if (!sidePanel || typeof sidePanel.open !== "function" || typeof windowId !== "number") {
+    if (!sidePanel || typeof sidePanel.open !== "function" || !Number.isInteger(windowId)) {
       return Promise.reject(new Error("Chrome Side Panel is unavailable for this window."));
     }
 
@@ -123,6 +138,7 @@
     LEGACY_SIDE_PANEL_PREFERENCE_KEY,
     QUICK_POPUP_PATH,
     isSidePanelPreferred,
+    normalizeExtensionError,
     migrateSidePanelPreference,
     applyToolbarPreference,
     openSidePanel
