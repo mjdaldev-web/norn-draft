@@ -2,7 +2,7 @@
 
 Norn Draft is a lightweight Manifest V3 browser extension for drafting polished AI-generated replies with tone presets and your own Gemini or OpenAI API key.
 
-## V1.8 features
+## V1.9 features
 
 - Generate a reply to a message, question, email, or comment
 - Rewrite an existing draft reply
@@ -10,11 +10,13 @@ Norn Draft is a lightweight Manifest V3 browser extension for drafting polished 
 - Create, edit, and delete local custom tone presets with reusable style guidance
 - Select a custom preset from the popup when drafting or rewriting
 - Right-click selected webpage text and open it in Norn Draft for review
+- Use a persistent Chrome side-panel workspace or keep the quick toolbar popup
+- Choose the side panel as the default toolbar behavior, or open it once from the popup
 - Add optional context/details for names, dates, deadlines, case numbers, or background
 - Generate with Gemini or OpenAI using your own provider-specific API key
 - Choose Gemini and OpenAI model presets or use custom model names
 - Copy the generated reply
-- Restore in-progress popup drafts after the extension popup closes
+- Restore in-progress drafting state across the popup, extension window, and side panel
 - Optionally save a local reply history, disabled by default, with Basic and Detailed modes
 - Manage saved history locally with restore, copy, delete, and clear actions
 - Store settings locally with `chrome.storage.local`
@@ -44,11 +46,11 @@ Norn Draft stores Gemini and OpenAI API keys separately and uses only the select
 
 ## Privacy
 
-- Norn Draft reads webpage text only after you explicitly choose the context-menu action for highlighted text; it does not read the surrounding page.
+- Norn Draft can stay open in Chrome's side panel without reading the current webpage. It reads highlighted webpage text only after you explicitly choose the context-menu action; it does not read the surrounding page.
 - Only text you review in the popup, selected tones or custom preset guidance, selected mode, optional context, and reply length guidance are sent to the chosen AI provider for generation.
 - Gemini and OpenAI API keys are stored separately and locally in this browser using `chrome.storage.local`.
 - API keys are never saved in reply history and are never sent to the other provider.
-- In-progress popup draft state, including the current generated reply, is stored locally so closing the popup does not lose your work.
+- In-progress workspace state, including the current generated reply, is stored locally so closing the popup or hiding the side panel does not lose your work.
 - Optional local reply history is disabled by default. Basic history stores generated replies and basic metadata only.
 - Detailed history can be explicitly enabled to store the original message/draft and optional context locally with the generated reply.
 - API keys, raw API responses, page URLs, page titles, page content, and clipboard data are never saved in history.
@@ -83,14 +85,14 @@ Extension icons are generated from `icons/norn-draft-updated.png` and wired into
 
 ## About
 
-Norn Draft 1.8 is developed by Mark Dalmacio (`mjdaldev`). Contact: [mjdaldev@gmail.com](mailto:mjdaldev@gmail.com).
+Norn Draft 1.9 is developed by Mark Dalmacio (`mjdaldev`). Contact: [mjdaldev@gmail.com](mailto:mjdaldev@gmail.com).
 
 Norn Draft only processes content when you explicitly request a draft or rewrite. AI requests may be sent to the external provider you select.
 
 ## Release Checklist
 
 - Manifest V3 is configured.
-- Permissions are limited to `storage` and `contextMenus`, plus Gemini and OpenAI API host access.
+- Permissions are limited to `storage`, `contextMenus`, and `sidePanel`, plus Gemini and OpenAI API host access.
 - Popup and Options JavaScript syntax checks pass.
 - Extension loads as an unpacked Chrome/Edge extension.
 - No API keys or secrets are committed.

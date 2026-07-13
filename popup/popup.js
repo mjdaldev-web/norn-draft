@@ -28,7 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
     openaiCustomModel: "",
     historyEnabled: false,
     historyDetailLevel: "basic",
-    historyLimit: "10"
+    historyLimit: "10",
+    openInSidePanelByDefault: false
   };
 
   const toneChips = Array.from(document.querySelectorAll(".tone-chip"));
@@ -44,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const clearHistoryButton = document.querySelector("#clear-history");
   const historyList = document.querySelector("#history-list");
   const settingsButton = document.querySelector("#settings");
+  const openSidePanelButton = document.querySelector("#open-side-panel");
   const output = document.querySelector("#reply-output");
   const status = document.querySelector("#status");
   const initialOutputText = output.textContent.trim();
@@ -60,6 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let statusTimeoutId = null;
   let saveDraftTimeoutId = null;
   let pendingSelectionPromise = null;
+  let hasUnsavedDraftChanges = false;
+  let lastSavedDraftAt = 0;
 
   const getStatusDuration = (type, duration) => {
     if (duration !== undefined) {
@@ -256,7 +260,8 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedPresetId,
       prompt: promptInput.value,
       context: contextInput.value,
-      generatedReply
+      generatedReply,
+      updatedAt: Date.now()
     };
   };
 
@@ -306,16 +311,20 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const saveDraftState = async () => {
+    const draftState = getDraftState();
     try {
       await chrome.storage.local.set({
-        [POPUP_DRAFT_STORAGE_KEY]: getDraftState()
+        [POPUP_DRAFT_STORAGE_KEY]: draftState
       });
+      lastSavedDraftAt = draftState.updatedAt;
+      hasUnsavedDraftChanges = false;
     } catch (error) {
       setStatus("Draft could not be saved locally.", "error");
     }
   };
 
   const scheduleDraftSave = () => {
+    hasUnsavedDraftChanges = true;
     if (saveDraftTimeoutId) {
       window.clearTimeout(saveDraftTimeoutId);
     }
@@ -534,6 +543,7 @@ document.addEventListener("DOMContentLoaded", () => {
     promptInput.value = typeof draftState.prompt === "string" ? draftState.prompt : "";
     contextInput.value = typeof draftState.context === "string" ? draftState.context : "";
     generatedReply = typeof draftState.generatedReply === "string" ? draftState.generatedReply : "";
+    lastSavedDraftAt = Number.isFinite(draftState.updatedAt) ? draftState.updatedAt : 0;
     setOutput(generatedReply || initialOutputText);
   };
 
@@ -1075,6 +1085,43 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.runtime.openOptionsPage();
   });
 
+  const openInSidePanel = async () => {
+    try {
+      await saveDraftState();
+      const currentWindow = await chrome.windows.getCurrent();
+      if (!chrome.sidePanel?.open) {
+        throw new Error("Chrome Side Panel is unavailable.");
+      }
+      await chrome.sidePanel.open({ windowId: currentWindow.id });
+    } catch (error) {
+      console.error("Norn Draft side panel opening failed; requesting the extension window fallback.", {
+        operation: "open side panel from popup",
+        error: error?.message || "Unknown browser error"
+      });
+      try {
+        const currentWindow = await chrome.windows.getCurrent();
+        const response = await chrome.runtime.sendMessage({
+          type: "nornDraftOpenSidePanel",
+          windowId: currentWindow.id
+        });
+        if (!response?.ok) {
+          throw new Error(response?.error || "Workspace did not open.");
+        }
+        setStatus(response.opened === "window" ? "Opened the Norn Draft window fallback." : "Opened Norn Draft in the side panel.", "success");
+      } catch (fallbackError) {
+        console.error("Norn Draft workspace fallback failed.", {
+          operation: "open workspace fallback from popup",
+          error: fallbackError?.message || "Unknown browser error"
+        });
+        setStatus("Norn Draft could not open the side panel.", "error");
+      }
+    }
+  };
+
+  if (!document.body.classList.contains("sidepanel")) {
+    openSidePanelButton.addEventListener("click", openInSidePanel);
+  }
+
   toneChips.forEach((chip) => {
     chip.addEventListener("click", () => toggleTone(chip));
   });
@@ -1088,6 +1135,12 @@ document.addEventListener("DOMContentLoaded", () => {
   promptInput.addEventListener("input", scheduleDraftSave);
   contextInput.addEventListener("input", scheduleDraftSave);
 
+  window.addEventListener("pagehide", () => {
+    if (hasUnsavedDraftChanges) {
+      saveDraftState();
+    }
+  });
+
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== "local") {
       return;
@@ -1095,6 +1148,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (changes[SELECTION_HANDOFF.SELECTION_HANDOFF_STORAGE_KEY]) {
       consumePendingSelection();
+    }
+
+    if (changes[POPUP_DRAFT_STORAGE_KEY] && !hasUnsavedDraftChanges) {
+      const incomingDraft = changes[POPUP_DRAFT_STORAGE_KEY].newValue;
+      const incomingUpdatedAt = Number.isFinite(incomingDraft?.updatedAt) ? incomingDraft.updatedAt : 0;
+
+      if (incomingUpdatedAt > lastSavedDraftAt) {
+        applyDraftState(incomingDraft);
+      }
     }
 
     if (!changes[PRESET_STORAGE_KEY]) {

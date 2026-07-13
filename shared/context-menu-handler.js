@@ -5,7 +5,7 @@
 
   const getErrorMessage = (error) => error?.message || "Unknown browser error";
 
-  const handleSelectionContextMenuClick = async ({ info, storage, openWindow, logger = console }) => {
+  const handleSelectionContextMenuClick = async ({ info, storage, openWindow, openWorkspace, logger = console }) => {
     if (!info || info.menuItemId !== MENU_ID) {
       return false;
     }
@@ -34,7 +34,7 @@
       }
 
       try {
-        await openWindow();
+        await (openWorkspace || openWindow)(info);
       } catch (error) {
         logger.error("Norn Draft popup/window opening failed.", {
           operation: "open extension window",

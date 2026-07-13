@@ -46,6 +46,22 @@ const createStorage = () => {
   assert.deepEqual(storage.calls[0][handoff.SELECTION_HANDOFF_STORAGE_KEY].text, "Selected text");
   assert.equal(logger.entries.length, 0);
 
+  const workspaceStorage = createStorage();
+  let receivedInfo = null;
+  const workspaceAccepted = await contextMenu.handleSelectionContextMenuClick({
+    info: {
+      menuItemId: contextMenu.MENU_ID,
+      selectionText: "Open in side panel"
+    },
+    storage: workspaceStorage,
+    openWorkspace: async (info) => {
+      receivedInfo = info;
+    },
+    logger: createLogger()
+  });
+  assert.equal(workspaceAccepted, true);
+  assert.equal(receivedInfo.selectionText, "Open in side panel");
+
   const ignoredStorage = createStorage();
   const ignored = await contextMenu.handleSelectionContextMenuClick({
     info: { menuItemId: "other-menu", selectionText: "Should not be used" },

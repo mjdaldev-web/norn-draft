@@ -1,4 +1,17 @@
-# Norn Draft V1.8.0 Release Readiness Notes
+# Norn Draft V1.9.0 Release Readiness Notes
+
+Norn Draft V1.9 adds a persistent Chrome side-panel workspace while retaining the existing quick popup.
+
+## Persistent Side Panel
+
+- Added `sidepanel/sidepanel.html`, using the same drafting script, local state, tones, custom presets, and generation path as the popup.
+- Added a local Settings preference to open the side panel from the toolbar by default; it remains disabled by default.
+- Added a one-time **Side panel** action in the quick popup without changing the default preference.
+- Right-click selected-text handoff opens the side panel in the originating browser window when supported.
+- Kept the extension-owned popup window as a compatibility fallback when Chrome cannot open the side panel.
+- The side panel does not read the current page and no AI request occurs until the user explicitly generates or rewrites.
+
+## V1.8.0 Release Readiness Notes
 
 Norn Draft V1.8 adds explicit right-click selected-text support while preserving the V1.7 custom preset workflow.
 

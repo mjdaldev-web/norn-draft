@@ -20,6 +20,47 @@ body {
   padding: 16px;
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+body.sidepanel {
+  min-width: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.sidepanel .popup {
+  width: 100%;
+  max-width: 760px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.sidepanel .output__content {
+  max-height: 42vh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 380px) {
+  .popup {
+    width: 100%;
+  }
+
+  .popup__header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+  }
+}
+
 .popup__header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

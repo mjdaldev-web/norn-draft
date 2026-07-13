@@ -12,7 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     openaiCustomModel: "",
     historyEnabled: false,
     historyDetailLevel: "basic",
-    historyLimit: "10"
+    historyLimit: "10",
+    openInSidePanelByDefault: false
   };
   const replyHistoryStorageKey = "nornDraftReplyHistory";
   const popupDraftStorageKey = "nornDraftPopupDraftState";
@@ -36,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const openaiCustomModelInput = document.querySelector("#openai-custom-model");
   const historyEnabledInput = document.querySelector("#history-enabled");
   const historyLimitSelect = document.querySelector("#history-limit");
+  const openInSidePanelInput = document.querySelector("#open-in-side-panel");
   const clearHistoryButton = document.querySelector("#clear-history");
   const historyList = document.querySelector("#options-history-list");
   const addPresetButton = document.querySelector("#add-preset");
@@ -519,7 +521,8 @@ document.addEventListener("DOMContentLoaded", () => {
       openaiCustomModel: openaiCustomModelInput.value.trim(),
       historyEnabled: historyEnabledInput.checked,
       historyDetailLevel: getSelectedHistoryDetailLevel(),
-      historyLimit: historyLimitSelect.value
+      historyLimit: historyLimitSelect.value,
+      openInSidePanelByDefault: openInSidePanelInput.checked
     };
   };
 
@@ -543,6 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
     historyEnabledInput.checked = Boolean(currentSettings.historyEnabled);
     setSelectedHistoryDetailLevel(currentSettings.historyDetailLevel);
     historyLimitSelect.value = currentSettings.historyLimit === "20" ? "20" : defaults.historyLimit;
+    openInSidePanelInput.checked = currentSettings.openInSidePanelByDefault === true;
     syncCustomModelInput();
     syncOpenAiCustomModelInput();
     syncProviderModelSections();

@@ -50,6 +50,15 @@
                 <option value="Detailed">Detailed</option>
               </select>
             </label>
+
+            <div class="settings__subgroup" aria-labelledby="workspace-title">
+              <h3 id="workspace-title">Workspace</h3>
+              <label class="toggle-row" for="open-in-side-panel">
+                <input id="open-in-side-panel" name="openInSidePanelByDefault" type="checkbox" />
+                <span>Open Norn Draft in side panel by default</span>
+              </label>
+              <p class="field-help field-help--compact">When enabled, clicking the Norn Draft toolbar icon opens the persistent side panel instead of the quick popup.</p>
+            </div>
           </section>
         </div>
 
@@ -241,7 +250,7 @@
               <li>Local reply history is off by default and stored locally only when enabled.</li>
               <li>Basic history saves generated replies and metadata only.</li>
               <li>Detailed history also saves the original message/draft and optional context locally if you explicitly select it.</li>
-              <li>API keys, raw API responses, page URLs, page titles, clipboard data, and browser page content are never saved in history. Selected webpage text is handed off locally only after you choose the Norn Draft context-menu action.</li>
+              <li>Opening the persistent side panel does not read the current webpage. Selected webpage text is handed off locally only after you choose the Norn Draft context-menu action.</li>
             </ul>
           </section>
 
@@ -251,7 +260,7 @@
               <div>
                 <p class="about-panel__eyebrow">About</p>
                 <h2 id="about-title">Norn Draft</h2>
-                <p class="about-panel__version">Version 1.8</p>
+                <p class="about-panel__version">Version 1.9</p>
               </div>
             </div>
             <dl class="about-panel__details">
@@ -260,7 +269,7 @@
               <div><dt>Email</dt><dd><a href="mailto:mjdaldev@gmail.com">mjdaldev@gmail.com</a></dd></div>
               <div><dt>Copyright</dt><dd>© 2026 Mark Dalmacio</dd></div>
             </dl>
-            <p class="about-panel__privacy">Norn Draft only processes content when you explicitly request a draft or rewrite. AI requests may be sent to the external provider you select.</p>
+            <p class="about-panel__privacy">Norn Draft can remain open in a browser side panel without reading the current webpage. Text is sent to the external provider you select only when you explicitly request a draft or rewrite.</p>
           </section>
         </div>
 
