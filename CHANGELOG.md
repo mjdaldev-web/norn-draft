@@ -5,6 +5,7 @@
 - Added a persistent Chrome side-panel workspace that reuses the existing drafting UI, tones, custom presets, and local draft state.
 - Added the optional local toolbar preference for opening the side panel by default while retaining the quick popup and one-time popup action.
 - Updated selected-text handoff to open the side panel in the originating window, with the extension-owned popup window retained as fallback.
+- Fixed selected-text handoff ordering, side-panel preference persistence, and fallback diagnostics for Chromium browsers.
 - Confirmed the side panel does not read webpages or make AI requests until the user explicitly generates or rewrites.
 
 ## 1.8.0
