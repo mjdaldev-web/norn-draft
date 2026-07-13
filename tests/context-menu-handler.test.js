@@ -46,21 +46,41 @@ const createStorage = () => {
   assert.deepEqual(storage.calls[0][handoff.SELECTION_HANDOFF_STORAGE_KEY].text, "Selected text");
   assert.equal(logger.entries.length, 0);
 
-  const workspaceStorage = createStorage();
-  let receivedInfo = null;
-  const workspaceAccepted = await contextMenu.handleSelectionContextMenuClick({
-    info: {
-      menuItemId: contextMenu.MENU_ID,
-      selectionText: "Open in side panel"
-    },
-    storage: workspaceStorage,
-    openWorkspace: async (info) => {
-      receivedInfo = info;
-    },
-    logger: createLogger()
+  const panelHandoff = contextMenu.createSelectionHandoffFromMenuInfo({
+    menuItemId: contextMenu.MENU_ID,
+    selectionText: "Open in side panel"
   });
-  assert.equal(workspaceAccepted, true);
-  assert.equal(receivedInfo.selectionText, "Open in side panel");
+  assert.equal(panelHandoff.text, "Open in side panel");
+
+  let panelStarted = false;
+  const orderingStorage = {
+    async set() {
+      assert.equal(panelStarted, true, "sidePanel.open must start before storage is awaited");
+    }
+  };
+  const panelOpenPromise = (() => {
+    panelStarted = true;
+    return Promise.resolve();
+  })();
+  let fallbackOpened = 0;
+  assert.equal(await contextMenu.finishSelectionContextMenuAction({
+    handoff: panelHandoff,
+    storage: orderingStorage,
+    panelOpenPromise,
+    openFallbackWindow: async () => { fallbackOpened += 1; },
+    logger: createLogger()
+  }), true);
+  assert.equal(fallbackOpened, 0);
+
+  let rejectedFallbackOpened = 0;
+  assert.equal(await contextMenu.finishSelectionContextMenuAction({
+    handoff: panelHandoff,
+    storage: createStorage(),
+    panelOpenPromise: Promise.reject(new Error("side panel rejected")),
+    openFallbackWindow: async () => { rejectedFallbackOpened += 1; },
+    logger: createLogger()
+  }), true);
+  assert.equal(rejectedFallbackOpened, 1);
 
   const ignoredStorage = createStorage();
   const ignored = await contextMenu.handleSelectionContextMenuClick({

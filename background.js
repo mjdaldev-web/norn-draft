@@ -33,11 +33,17 @@ const registerContextMenu = () => {
 
 const configureToolbarBehavior = async () => {
   try {
-    const stored = await chrome.storage.local.get(SIDE_PANEL.SIDE_PANEL_PREFERENCE_KEY);
+    const enabled = await SIDE_PANEL.migrateSidePanelPreference({
+      storage: chrome.storage.local,
+      logger: console
+    });
+    const popupPath = chrome.runtime.getManifest().action?.default_popup || SIDE_PANEL.QUICK_POPUP_PATH;
     await SIDE_PANEL.applyToolbarPreference({
-      enabled: SIDE_PANEL.isSidePanelPreferred(stored[SIDE_PANEL.SIDE_PANEL_PREFERENCE_KEY]),
+      enabled,
       action: chrome.action,
-      sidePanel: chrome.sidePanel
+      sidePanel: chrome.sidePanel,
+      popupPath,
+      logger: console
     });
   } catch (error) {
     console.error("Norn Draft toolbar behavior could not be configured.", {
@@ -143,10 +149,28 @@ chrome.windows.onRemoved.addListener((windowId) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  CONTEXT_MENU.handleSelectionContextMenuClick({
-    info,
+  const handoff = CONTEXT_MENU.createSelectionHandoffFromMenuInfo(info);
+
+  if (!handoff) {
+    return;
+  }
+
+  const windowId = tab?.windowId;
+  let panelOpenPromise;
+
+  try {
+    panelOpenPromise = chrome.sidePanel?.open && typeof windowId === "number"
+      ? chrome.sidePanel.open({ windowId })
+      : Promise.reject(new Error("Chrome Side Panel is unavailable for this window."));
+  } catch (error) {
+    panelOpenPromise = Promise.reject(error);
+  }
+
+  void CONTEXT_MENU.finishSelectionContextMenuAction({
+    handoff,
     storage: chrome.storage.local,
-    openWorkspace: () => openNornDraftWorkspace({ tab }),
+    panelOpenPromise,
+    openFallbackWindow: openNornDraftWindow,
     logger: console
   });
 });
@@ -168,3 +192,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   return true;
 });
+
+// Apply the saved toolbar mode every time this MV3 service worker starts.
+void configureToolbarBehavior();

@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const sidePanelPreferenceKey = window.NornDraftSidePanel.SIDE_PANEL_PREFERENCE_KEY;
   const defaults = {
     provider: "Gemini",
     apiKey: "",
@@ -13,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     historyEnabled: false,
     historyDetailLevel: "basic",
     historyLimit: "10",
-    openInSidePanelByDefault: false
+    [sidePanelPreferenceKey]: false
   };
   const replyHistoryStorageKey = "nornDraftReplyHistory";
   const popupDraftStorageKey = "nornDraftPopupDraftState";
@@ -522,7 +523,7 @@ document.addEventListener("DOMContentLoaded", () => {
       historyEnabled: historyEnabledInput.checked,
       historyDetailLevel: getSelectedHistoryDetailLevel(),
       historyLimit: historyLimitSelect.value,
-      openInSidePanelByDefault: openInSidePanelInput.checked
+      [sidePanelPreferenceKey]: openInSidePanelInput.checked
     };
   };
 
@@ -546,7 +547,7 @@ document.addEventListener("DOMContentLoaded", () => {
     historyEnabledInput.checked = Boolean(currentSettings.historyEnabled);
     setSelectedHistoryDetailLevel(currentSettings.historyDetailLevel);
     historyLimitSelect.value = currentSettings.historyLimit === "20" ? "20" : defaults.historyLimit;
-    openInSidePanelInput.checked = currentSettings.openInSidePanelByDefault === true;
+    openInSidePanelInput.checked = currentSettings[sidePanelPreferenceKey] === true;
     syncCustomModelInput();
     syncOpenAiCustomModelInput();
     syncProviderModelSections();
@@ -556,6 +557,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const loadSettings = async () => {
     try {
+      await window.NornDraftSidePanel.migrateSidePanelPreference({ storage, logger: console });
       const savedSettings = await storage.get(defaults);
       const migratedSettings = await migrateLegacyApiKey({ ...defaults, ...savedSettings });
       applySettings(migratedSettings);

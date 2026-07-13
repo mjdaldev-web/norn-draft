@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     historyEnabled: false,
     historyDetailLevel: "basic",
     historyLimit: "10",
-    openInSidePanelByDefault: false
+    nornDraftOpenInSidePanelByDefault: false
   };
 
   const toneChips = Array.from(document.querySelectorAll(".tone-chip"));

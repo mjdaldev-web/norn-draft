@@ -5,58 +5,97 @@
 
   const getErrorMessage = (error) => error?.message || "Unknown browser error";
 
-  const handleSelectionContextMenuClick = async ({ info, storage, openWindow, openWorkspace, logger = console }) => {
+  const createSelectionHandoffFromMenuInfo = (info) => {
     if (!info || info.menuItemId !== MENU_ID) {
-      return false;
+      return null;
     }
 
+    return root.NornDraftSelectionHandoff.createSelectionHandoff({
+      selectionText: info.selectionText
+    });
+  };
+
+  const storeSelectionHandoff = async ({ handoff, storage, logger = console }) => {
     try {
-      const handoff = root.NornDraftSelectionHandoff.createSelectionHandoff({
-        selectionText: info.selectionText
+      await storage.set({
+        [root.NornDraftSelectionHandoff.SELECTION_HANDOFF_STORAGE_KEY]: handoff
       });
-
-      if (!handoff) {
-        return false;
-      }
-
-      try {
-        await storage.set({
-          [root.NornDraftSelectionHandoff.SELECTION_HANDOFF_STORAGE_KEY]: handoff
-        });
-      } catch (error) {
-        logger.error("Norn Draft pending-selection storage failed.", {
-          operation: "store pending selection",
-          menuId: MENU_ID,
-          selectedTextLength: handoff.text.length,
-          error: getErrorMessage(error)
-        });
-        return false;
-      }
-
-      try {
-        await (openWorkspace || openWindow)(info);
-      } catch (error) {
-        logger.error("Norn Draft popup/window opening failed.", {
-          operation: "open extension window",
-          menuId: MENU_ID,
-          selectedTextLength: handoff.text.length,
-          error: getErrorMessage(error)
-        });
-        return false;
-      }
-
       return true;
     } catch (error) {
-      logger.error("Norn Draft context-menu handler failed.", {
-        operation: "handle selected-text context menu",
+      logger.error("Norn Draft pending-selection storage failed.", {
+        operation: "store pending selection",
         menuId: MENU_ID,
+        selectedTextLength: handoff.text.length,
         error: getErrorMessage(error)
       });
       return false;
     }
   };
 
-  const api = { MENU_ID, handleSelectionContextMenuClick };
+  const finishSelectionContextMenuAction = async ({ handoff, storage, panelOpenPromise, openFallbackWindow, logger = console }) => {
+    const storageSucceeded = await storeSelectionHandoff({ handoff, storage, logger });
+
+    try {
+      await panelOpenPromise;
+      return storageSucceeded;
+    } catch (error) {
+      logger.error("Norn Draft context-menu side panel opening failed.", {
+        operation: "open side panel from context menu",
+        menuId: MENU_ID,
+        selectedTextLength: handoff.text.length,
+        error: getErrorMessage(error)
+      });
+
+      try {
+        await openFallbackWindow();
+        return storageSucceeded;
+      } catch (fallbackError) {
+        logger.error("Norn Draft context-menu fallback window failed.", {
+          operation: "open fallback extension window",
+          menuId: MENU_ID,
+          selectedTextLength: handoff.text.length,
+          error: getErrorMessage(fallbackError)
+        });
+        return false;
+      }
+    }
+  };
+
+  // Retained for focused handoff tests and callers that do not need a side panel.
+  const handleSelectionContextMenuClick = async ({ info, storage, openWindow, logger = console }) => {
+    const handoff = createSelectionHandoffFromMenuInfo(info);
+
+    if (!handoff) {
+      return false;
+    }
+
+    const stored = await storeSelectionHandoff({ handoff, storage, logger });
+
+    if (!stored) {
+      return false;
+    }
+
+    try {
+      await openWindow();
+      return true;
+    } catch (error) {
+      logger.error("Norn Draft popup/window opening failed.", {
+        operation: "open extension window",
+        menuId: MENU_ID,
+        selectedTextLength: handoff.text.length,
+        error: getErrorMessage(error)
+      });
+      return false;
+    }
+  };
+
+  const api = {
+    MENU_ID,
+    createSelectionHandoffFromMenuInfo,
+    storeSelectionHandoff,
+    finishSelectionContextMenuAction,
+    handleSelectionContextMenuClick
+  };
   root.NornDraftContextMenu = api;
 
   if (typeof module !== "undefined" && module.exports) {
