@@ -85,7 +85,7 @@ Extension icons are generated from `icons/norn-draft-updated.png` and wired into
 
 ## About
 
-Norn Draft 1.9 is developed by Mark Dalmacio (`mjdaldev`). Contact: [mjdaldev@gmail.com](mailto:mjdaldev@gmail.com).
+Norn Draft 1.9 is developed by Mark Dalmacio (`mjdaldev`).
 
 Norn Draft only processes content when you explicitly request a draft or rewrite. AI requests may be sent to the external provider you select.
 
