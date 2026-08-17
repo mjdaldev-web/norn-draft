@@ -1,4 +1,16 @@
-# Norn Draft V1.9.0 Release Readiness Notes
+# Norn Draft V2.0.0 Release Readiness Notes
+
+Norn Draft V2.0 adds model discovery, usage visibility, input safeguards, request protection, and a more compact drafting interface.
+
+## V2.0.0
+
+- Added manual Gemini and OpenAI model discovery with filtered text-capable models.
+- Added local model caching, last-refresh timestamps, one-hour refresh cooldown, and early-refresh confirmation.
+- Added configurable message/draft and context character limits with live counters.
+- Added provider-reported token usage details after successful generation.
+- Added duplicate-generation protection and 60-second generation / 20-second discovery timeouts.
+- Added collapsible optional context/details sections in the popup and side panel.
+- Updated privacy and security disclosures for model discovery, limits, usage metadata, and timeouts.
 
 Norn Draft V1.9 adds a persistent Chrome side-panel workspace while retaining the existing quick popup.
 

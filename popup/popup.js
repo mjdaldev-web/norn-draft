@@ -1,15 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const GEMINI_MODEL_PRESETS = {
-    auto: "gemini-3.5-flash",
-    "flash-lite": "gemini-3.1-flash-lite",
-    flash: "gemini-3.5-flash"
-  };
-  const OPENAI_MODEL_PRESETS = {
-    recommended: "gpt-5.4-mini",
-    mini: "gpt-5.4-mini",
-    quality: "gpt-5.5"
-  };
+  const MODEL_CONFIG = window.NornDraftModelConfig;
+  const MODEL_DISCOVERY = window.NornDraftModelDiscovery;
+  const DRAFT_LIMITS = window.NornDraftDraftLimits;
   const OPENAI_RESPONSES_ENDPOINT = "https://api.openai.com/v1/responses";
+  const GENERATION_TIMEOUT_MS = 60 * 1000;
   const POPUP_DRAFT_STORAGE_KEY = "nornDraftPopupDraftState";
   const REPLY_HISTORY_STORAGE_KEY = "nornDraftReplyHistory";
   const PRESET_STORAGE_KEY = window.NornDraftTonePresets.PRESET_STORAGE_KEY;
@@ -22,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
     openaiApiKey: "",
     defaultTone: "Professional",
     replyLength: "Balanced",
+    promptMaxCharacters: DRAFT_LIMITS.DRAFT_LIMITS.prompt.defaultValue,
+    contextMaxCharacters: DRAFT_LIMITS.DRAFT_LIMITS.context.defaultValue,
     geminiModelPreset: "auto",
     geminiCustomModel: "",
     openaiModelPreset: "recommended",
@@ -38,7 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const promptLabel = document.querySelector("#prompt-title");
   const promptHelp = document.querySelector("#prompt-help");
   const promptInput = document.querySelector("#prompt");
+  const promptCount = document.querySelector("#prompt-count");
   const contextInput = document.querySelector("#context");
+  const contextCount = document.querySelector("#context-count");
   const generateButton = document.querySelector("#generate");
   const clearButton = document.querySelector("#clear");
   const copyButton = document.querySelector("#copy");
@@ -47,6 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const settingsButton = document.querySelector("#settings");
   const openSidePanelButton = document.querySelector("#open-side-panel");
   const output = document.querySelector("#reply-output");
+  const replyCount = document.querySelector("#reply-count");
+  const usageDetails = document.querySelector("#usage-details");
+  const usageContent = document.querySelector("#usage-content");
   const status = document.querySelector("#status");
   const initialOutputText = output.textContent.trim();
   const validModes = ["Generate Reply", "Rewrite Draft"];
@@ -64,6 +65,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let pendingSelectionPromise = null;
   let hasUnsavedDraftChanges = false;
   let lastSavedDraftAt = 0;
+  let discoveredModels = {};
+  let generationInProgress = false;
 
   const getStatusDuration = (type, duration) => {
     if (duration !== undefined) {
@@ -120,11 +123,60 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const setOutput = (message) => {
     output.textContent = message;
+    updateCharacterCounts();
+  };
+
+  const formatUsageTokens = (value) => Number.isFinite(Number(value))
+    ? `${Number(value).toLocaleString()} tokens`
+    : "Unavailable";
+
+  const hideUsageDetails = () => {
+    usageDetails.hidden = true;
+    usageContent.textContent = "";
+  };
+
+  const showUsageDetails = ({ provider, model, usage }) => {
+    if (!usage || !Number.isFinite(Number(usage.totalTokens))) {
+      hideUsageDetails();
+      return;
+    }
+
+    usageContent.replaceChildren(
+      ...[
+        `Provider: ${provider}`,
+        `Model: ${model}`,
+        `Input: ${formatUsageTokens(usage.inputTokens)}`,
+        `Output: ${formatUsageTokens(usage.outputTokens)}`,
+        `Total: ${formatUsageTokens(usage.totalTokens)}`,
+        ...(Number.isFinite(Number(usage.reasoningTokens))
+          ? [`Reasoning: ${formatUsageTokens(usage.reasoningTokens)}`]
+          : [])
+      ].map((line) => {
+        const element = document.createElement("div");
+        element.textContent = line;
+        return element;
+      })
+    );
+    usageDetails.hidden = false;
   };
 
   const setLoading = (isLoading) => {
     generateButton.disabled = isLoading;
     generateButton.textContent = isLoading ? "Generating..." : "Generate Reply";
+  };
+
+  const applyInputLimits = () => {
+    promptInput.maxLength = DRAFT_LIMITS.getLimit("prompt", currentSettings.promptMaxCharacters);
+    contextInput.maxLength = DRAFT_LIMITS.getLimit("context", currentSettings.contextMaxCharacters);
+    updateCharacterCounts();
+  };
+
+  const updateCharacterCounts = () => {
+    const promptLimit = DRAFT_LIMITS.getLimit("prompt", currentSettings.promptMaxCharacters);
+    const contextLimit = DRAFT_LIMITS.getLimit("context", currentSettings.contextMaxCharacters);
+    promptCount.textContent = `${promptInput.value.length.toLocaleString()} / ${promptLimit.toLocaleString()} characters`;
+    contextCount.textContent = `${contextInput.value.length.toLocaleString()} / ${contextLimit.toLocaleString()} characters`;
+    replyCount.textContent = `${generatedReply.length.toLocaleString()} characters`;
   };
 
   const escapeHtml = (value) => {
@@ -443,6 +495,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  const loadDiscoveredModels = async () => {
+    try {
+      const cache = await MODEL_DISCOVERY.readCache(chrome.storage.local);
+      discoveredModels = {
+        Gemini: MODEL_DISCOVERY.getFreshCachedModels(cache, "Gemini"),
+        OpenAI: MODEL_DISCOVERY.getFreshCachedModels(cache, "OpenAI")
+      };
+    } catch (error) {
+      discoveredModels = {};
+    }
+  };
+
   const getProviderApiKeySetting = (provider) => {
     return provider === "OpenAI" ? "openaiApiKey" : "geminiApiKey";
   };
@@ -610,6 +674,7 @@ document.addEventListener("DOMContentLoaded", () => {
             promptInput.value = text;
             generatedReply = "";
             setOutput(initialOutputText);
+            updateCharacterCounts();
             scheduleDraftSave();
             promptInput.focus();
           },
@@ -641,25 +706,19 @@ document.addEventListener("DOMContentLoaded", () => {
     return pendingSelectionPromise;
   };
 
-  const resolveGeminiModel = (settings) => {
-    const preset = settings.geminiModelPreset || DEFAULT_SETTINGS.geminiModelPreset;
+  const resolveGeminiModel = (settings) => MODEL_CONFIG.resolveModel(
+    "Gemini",
+    settings.geminiModelPreset || DEFAULT_SETTINGS.geminiModelPreset,
+    settings.geminiCustomModel || "",
+    discoveredModels.Gemini
+  );
 
-    if (preset === "custom") {
-      return (settings.geminiCustomModel || "").trim();
-    }
-
-    return GEMINI_MODEL_PRESETS[preset] || GEMINI_MODEL_PRESETS.auto;
-  };
-
-  const resolveOpenAiModel = (settings) => {
-    const preset = settings.openaiModelPreset || DEFAULT_SETTINGS.openaiModelPreset;
-
-    if (preset === "custom") {
-      return (settings.openaiCustomModel || "").trim();
-    }
-
-    return OPENAI_MODEL_PRESETS[preset] || OPENAI_MODEL_PRESETS.recommended;
-  };
+  const resolveOpenAiModel = (settings) => MODEL_CONFIG.resolveModel(
+    "OpenAI",
+    settings.openaiModelPreset || DEFAULT_SETTINGS.openaiModelPreset,
+    settings.openaiCustomModel || "",
+    discoveredModels.OpenAI
+  );
 
   const getGeminiErrorMessage = (statusCode, responseBody, model) => {
     const geminiError = responseBody?.error || {};
@@ -698,6 +757,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .trim();
   };
 
+  const extractGeminiUsage = (responseBody) => {
+    const usage = responseBody?.usageMetadata;
+    if (!usage) return null;
+    return {
+      inputTokens: usage.promptTokenCount,
+      outputTokens: usage.candidatesTokenCount,
+      totalTokens: usage.totalTokenCount,
+      reasoningTokens: usage.thoughtsTokenCount
+    };
+  };
+
   const extractOpenAiReply = (responseBody) => {
     if (typeof responseBody?.output_text === "string" && responseBody.output_text.trim()) {
       return responseBody.output_text.trim();
@@ -722,6 +792,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .trim();
   };
 
+  const extractOpenAiUsage = (responseBody) => {
+    const usage = responseBody?.usage;
+    if (!usage) return null;
+    return {
+      inputTokens: usage.input_tokens,
+      outputTokens: usage.output_tokens,
+      totalTokens: usage.total_tokens,
+      reasoningTokens: usage.output_tokens_details?.reasoning_tokens
+    };
+  };
+
   const safeParseJson = (text) => {
     if (!text) {
       return null;
@@ -744,6 +825,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return fallbackMessage;
+  };
+
+  const fetchWithTimeout = async (url, options, timeoutMs) => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   };
 
   const createFailureResult = (message) => {
@@ -788,10 +880,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const callGemini = async ({ apiKey, model, prompt }) => {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-    const response = await fetch(`${endpoint}?key=${encodeURIComponent(apiKey)}`, {
+    const response = await fetchWithTimeout(endpoint, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
       },
       body: JSON.stringify({
         contents: [
@@ -808,7 +901,7 @@ document.addEventListener("DOMContentLoaded", () => {
           temperature: 0.7
         }
       })
-    });
+    }, GENERATION_TIMEOUT_MS);
 
     const responseText = await response.text().catch(() => "");
     const responseBody = safeParseJson(responseText) || {};
@@ -825,12 +918,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return {
       ok: true,
-      reply
+      reply,
+      usage: extractGeminiUsage(responseBody)
     };
   };
 
   const callOpenAi = async ({ apiKey, model, prompt }) => {
-    const response = await fetch(OPENAI_RESPONSES_ENDPOINT, {
+    const response = await fetchWithTimeout(OPENAI_RESPONSES_ENDPOINT, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -840,7 +934,7 @@ document.addEventListener("DOMContentLoaded", () => {
         model,
         input: prompt
       })
-    });
+    }, GENERATION_TIMEOUT_MS);
 
     const responseText = await response.text().catch(() => "");
     const responseBody = safeParseJson(responseText) || {};
@@ -857,13 +951,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return {
       ok: true,
-      reply
+      reply,
+      usage: extractOpenAiUsage(responseBody)
     };
   };
 
   const generateReply = async () => {
-    const prompt = promptInput.value.trim();
-    const context = contextInput.value.trim();
+    if (generationInProgress) {
+      return;
+    }
+
+    generationInProgress = true;
+    hideUsageDetails();
+
+    try {
+      const prompt = promptInput.value.trim();
+      const context = contextInput.value.trim();
 
     if (!prompt) {
       generatedReply = "";
@@ -875,6 +978,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     await loadSettings();
+    applyInputLimits();
+
+    const promptLimit = DRAFT_LIMITS.getLimit("prompt", currentSettings.promptMaxCharacters);
+    const contextLimit = DRAFT_LIMITS.getLimit("context", currentSettings.contextMaxCharacters);
+    if (prompt.length > promptLimit || context.length > contextLimit) {
+      const exceeded = prompt.length > promptLimit ? `message/draft (${prompt.length.toLocaleString()} / ${promptLimit.toLocaleString()})` : `context (${context.length.toLocaleString()} / ${contextLimit.toLocaleString()})`;
+      generatedReply = "";
+      setOutput(`Shorten the ${exceeded} before generating.`);
+      setStatus(`Input limit exceeded: ${exceeded} characters.`, "validation");
+      saveDraftState();
+      return;
+    }
 
     if (currentSettings.provider !== "Gemini" && currentSettings.provider !== "OpenAI") {
       generatedReply = "";
@@ -924,64 +1039,80 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     generatedReply = "";
+    hideUsageDetails();
     setLoading(true);
     setOutput("Generating your recommended reply...");
     setStatus(`Generating with ${currentSettings.provider}...`, "success", { persist: true });
     saveDraftState();
 
-    try {
-      const generationResult = isOpenAiProvider
-        ? await callOpenAi({
-            apiKey: providerApiKey,
-            model: selectedModel,
-            prompt: aiPrompt
-          })
-        : await callGemini({
-            apiKey: providerApiKey,
-            model: selectedModel,
-            prompt: aiPrompt
-          });
-      if (!generationResult.ok) {
+      try {
+        const generationResult = isOpenAiProvider
+          ? await callOpenAi({
+              apiKey: providerApiKey,
+              model: selectedModel,
+              prompt: aiPrompt
+            })
+          : await callGemini({
+              apiKey: providerApiKey,
+              model: selectedModel,
+              prompt: aiPrompt
+            });
+        if (!generationResult.ok) {
+          generatedReply = "";
+          setOutput(generationResult.errorMessage);
+          setStatus(generationResult.errorMessage, "error");
+          await saveDraftState();
+          return;
+        }
+
+        generatedReply = generationResult.reply;
+        setOutput(generatedReply);
+        showUsageDetails({
+          provider: currentSettings.provider,
+          model: selectedModel,
+          usage: generationResult.usage
+        });
+        const historySaved = await addReplyToHistory({
+          reply: generatedReply,
+          provider: currentSettings.provider,
+          model: selectedModel,
+          mode: selectedMode,
+          tones: getSelectedTones(),
+          replyLength: currentSettings.replyLength,
+          inputText: prompt,
+          context
+        });
+        setStatus(
+          historySaved ? "Reply generated." : "Reply generated, but history could not be saved.",
+          historySaved ? "success" : "error"
+        );
+        await saveDraftState();
+      } catch (error) {
         generatedReply = "";
-        setOutput(generationResult.errorMessage);
-        setStatus(generationResult.errorMessage, "error");
+        const safeMessage = getErrorMessage(error, "The reply could not be generated. Please try again.");
+
+        if (error?.name === "AbortError") {
+          setOutput("Generation timed out after 60 seconds. Check your connection and try again.");
+          setStatus("Generation timed out. You can try again now.", "error");
+          await saveDraftState();
+          return;
+        }
+
+        if (error instanceof TypeError) {
+          setOutput("Network connection failed. Check your connection and try again.");
+          setStatus("Network connection failed.", "error");
+          await saveDraftState();
+          return;
+        }
+
+        setOutput(safeMessage);
+        setStatus(safeMessage, "error");
         await saveDraftState();
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      generatedReply = generationResult.reply;
-      setOutput(generatedReply);
-      const historySaved = await addReplyToHistory({
-        reply: generatedReply,
-        provider: currentSettings.provider,
-        model: selectedModel,
-        mode: selectedMode,
-        tones: getSelectedTones(),
-        replyLength: currentSettings.replyLength,
-        inputText: prompt,
-        context
-      });
-      setStatus(
-        historySaved ? "Reply generated." : "Reply generated, but history could not be saved.",
-        historySaved ? "success" : "error"
-      );
-      await saveDraftState();
-    } catch (error) {
-      generatedReply = "";
-      const safeMessage = getErrorMessage(error, "The reply could not be generated. Please try again.");
-
-      if (error instanceof TypeError) {
-        setOutput("Network connection failed. Check your connection and try again.");
-        setStatus("Network connection failed.", "error");
-        await saveDraftState();
-        return;
-      }
-
-      setOutput(safeMessage);
-      setStatus(safeMessage, "error");
-      await saveDraftState();
     } finally {
-      setLoading(false);
+      generationInProgress = false;
     }
   };
 
@@ -995,6 +1126,7 @@ document.addEventListener("DOMContentLoaded", () => {
     promptInput.value = "";
     contextInput.value = "";
     generatedReply = "";
+    hideUsageDetails();
     setOutput(initialOutputText);
     setMode("Generate Reply");
     setDefaultTone(getFallbackTone());
@@ -1131,8 +1263,14 @@ document.addEventListener("DOMContentLoaded", () => {
     option.addEventListener("click", () => selectMode(option));
   });
 
-  promptInput.addEventListener("input", scheduleDraftSave);
-  contextInput.addEventListener("input", scheduleDraftSave);
+  promptInput.addEventListener("input", () => {
+    updateCharacterCounts();
+    scheduleDraftSave();
+  });
+  contextInput.addEventListener("input", () => {
+    updateCharacterCounts();
+    scheduleDraftSave();
+  });
 
   window.addEventListener("pagehide", () => {
     if (hasUnsavedDraftChanges) {
@@ -1173,7 +1311,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  loadSettings()
+  loadDiscoveredModels()
+    .then(loadSettings)
+    .then(() => {
+      applyInputLimits();
+    })
     .then(loadCustomPresets)
     .then(loadDraftState)
     .then(consumePendingSelection)

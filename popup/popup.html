@@ -68,11 +68,15 @@
         <label id="prompt-title" for="prompt">Message to reply to</label>
         <p id="prompt-help" class="field-help">Paste the message, question, email, or comment you received.</p>
         <textarea id="prompt" rows="5" placeholder="Paste or type what you want to reply to."></textarea>
-        <label class="context-label" for="context">Context / details, optional</label>
-        <p id="context-help" class="field-help field-help--secondary">
-          Add important details Norn Draft should consider, such as dates, names, case numbers, deadlines, preferred outcome, or background information.
-        </p>
-        <textarea id="context" class="context-input" rows="3" placeholder="Add brief context if helpful."></textarea>
+        <p id="prompt-count" class="character-count" aria-live="polite"></p>
+        <details class="context-details">
+          <summary class="context-label">Context / details, optional</summary>
+          <p id="context-help" class="field-help field-help--secondary">
+            Add important details Norn Draft should consider, such as dates, names, case numbers, deadlines, preferred outcome, or background information.
+          </p>
+          <textarea id="context" class="context-input" rows="3" placeholder="Add brief context if helpful."></textarea>
+          <p id="context-count" class="character-count" aria-live="polite"></p>
+        </details>
         <div class="composer__actions">
           <button id="generate" class="button button--primary" type="button">Generate Reply</button>
           <button id="clear" class="button button--secondary" type="button">Clear</button>
@@ -87,6 +91,11 @@
         <div id="reply-output" class="output__content" aria-live="polite">
           Your recommended reply will appear here.
         </div>
+        <p id="reply-count" class="character-count" aria-live="polite"></p>
+        <details id="usage-details" class="usage-details" hidden>
+          <summary>Usage details</summary>
+          <div id="usage-content" class="usage-content"></div>
+        </details>
       </section>
 
       <section class="history" aria-labelledby="history-title">
@@ -105,6 +114,9 @@
     </main>
 
     <script src="../shared/tone-presets.js"></script>
+    <script src="../shared/model-config.js"></script>
+    <script src="../shared/model-discovery.js"></script>
+    <script src="../shared/draft-limits.js"></script>
     <script src="../shared/selection-handoff.js"></script>
     <script src="../shared/side-panel.js"></script>
     <script src="popup.js"></script>
