@@ -207,6 +207,20 @@ body {
   line-height: 1.5;
 }
 
+.model-discovery-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.model-info {
+  margin: 0.65rem 0 0.85rem;
+  color: var(--muted-text, #667085);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .field-help--compact {
   margin-top: 6px;
   font-size: 12px;
@@ -219,8 +233,23 @@ body {
   align-items: end;
 }
 
+.input-limits-row {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.input-limits-row > .field {
+  align-self: start;
+}
+
+.input-limits-row > .field > span {
+  display: block;
+  min-height: 18px;
+}
+
 input[type="password"],
 input[type="text"],
+input[type="number"],
 select,
 textarea {
   width: 100%;
@@ -232,6 +261,10 @@ textarea {
   background: #ffffff;
   font: inherit;
   font-size: 14px;
+}
+
+.input-limits-row input[type="number"] {
+  height: 40px;
 }
 
 textarea {

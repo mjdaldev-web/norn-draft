@@ -51,6 +51,22 @@
               </select>
             </label>
 
+            <div class="settings__subgroup" aria-labelledby="input-limits-title">
+              <h3 id="input-limits-title">Input limits</h3>
+              <p class="field-help field-help--compact">Limits are measured in characters and prevent accidental oversized requests. The minimum and maximum values are enforced for safety.</p>
+              <div class="field-row input-limits-row">
+                <label class="field" for="prompt-max-characters">
+                  <span>Message / draft limit</span>
+                  <input id="prompt-max-characters" name="promptMaxCharacters" type="number" min="1000" max="20000" step="500" />
+                </label>
+                <label class="field" for="context-max-characters">
+                  <span>Context limit</span>
+                  <input id="context-max-characters" name="contextMaxCharacters" type="number" min="500" max="8000" step="500" />
+                </label>
+              </div>
+              <p class="field-help field-help--compact">Recommended defaults: 12,000 characters for the message or draft and 4,000 for optional context.</p>
+            </div>
+
             <div class="settings__subgroup" aria-labelledby="workspace-title">
               <h3 id="workspace-title">Workspace</h3>
               <label class="toggle-row" for="open-in-side-panel">
@@ -113,6 +129,7 @@
                 <option value="custom">Custom model name</option>
               </select>
             </label>
+            <p id="gemini-model-info" class="model-info" aria-live="polite"></p>
 
             <label class="field field--custom-model" for="gemini-custom-model">
               <span>Custom model name</span>
@@ -122,6 +139,10 @@
             <p class="field-help">
               Recommended uses Gemini 3.5 Flash. Flash-Lite is faster/lighter. Pro models may require special API access. If your API project has access to a Pro model, use Custom model name.
             </p>
+            <div class="model-discovery-actions">
+              <button id="refresh-gemini-models" class="button button--secondary button--inline" type="button">Refresh available models</button>
+              <span id="gemini-model-discovery-status" class="field-help">Uses the saved Gemini key and caches results locally for 24 hours.</span>
+            </div>
           </section>
 
           <section id="openai-model-panel" class="settings__panel" aria-labelledby="openai-model-title" hidden>
@@ -139,6 +160,7 @@
                 <option value="custom">Custom model name</option>
               </select>
             </label>
+            <p id="openai-model-info" class="model-info" aria-live="polite"></p>
 
             <label class="field field--custom-model" for="openai-custom-model">
               <span>Custom model name</span>
@@ -148,6 +170,10 @@
             <p class="field-help">
               Recommended uses the default OpenAI model selected for Norn Draft. Mini is more cost-friendly. GPT-5.5 may cost more or require access. Custom is for advanced users.
             </p>
+            <div class="model-discovery-actions">
+              <button id="refresh-openai-models" class="button button--secondary button--inline" type="button">Refresh available models</button>
+              <span id="openai-model-discovery-status" class="field-help">Uses the saved OpenAI key and caches results locally for 24 hours.</span>
+            </div>
           </section>
         </div>
 
@@ -246,7 +272,11 @@
               <li>Gemini and OpenAI API keys are stored separately and locally in this browser using chrome.storage.local.</li>
               <li>API keys are never saved in reply history and are never sent to the other provider.</li>
               <li>Norn Draft only processes content when you explicitly request a draft or rewrite.</li>
-              <li>When you generate, the requested content and selected settings are sent to the chosen AI provider's API.</li>
+              <li>When you generate or rewrite, the requested content and selected settings are sent to the chosen AI provider's API.</li>
+              <li>Optional model discovery runs only when you click Refresh available models. It sends only the selected provider's API key, caches the filtered model list locally for 24 hours, and uses a one-hour refresh cooldown with confirmation.</li>
+              <li>Message/draft and context limits are configurable, measured in characters, and checked before any generation request is sent.</li>
+              <li>Character counters are displayed locally. Provider-reported token usage is displayed after generation when available and is not saved in reply history.</li>
+              <li>Generation requests time out after 60 seconds and model discovery requests time out after 20 seconds; a timeout does not retry or send another request automatically.</li>
               <li>Local reply history is off by default and stored locally only when enabled.</li>
               <li>Basic history saves generated replies and metadata only.</li>
               <li>Detailed history also saves the original message/draft and optional context locally if you explicitly select it.</li>
@@ -260,16 +290,14 @@
               <div>
                 <p class="about-panel__eyebrow">About</p>
                 <h2 id="about-title">Norn Draft</h2>
-                <p class="about-panel__version">Version 1.9</p>
+                <p class="about-panel__version">Version 2.0</p>
               </div>
             </div>
             <dl class="about-panel__details">
-              <div><dt>Developed by</dt><dd>Mark Dalmacio</dd></div>
-              <div><dt>Handle</dt><dd>mjdaldev</dd></div>
-              <div><dt>Email</dt><dd><a href="mailto:mjdaldev@gmail.com">mjdaldev@gmail.com</a></dd></div>
-              <div><dt>Copyright</dt><dd>© 2026 Mark Dalmacio</dd></div>
+              <div><dt>Edition</dt><dd>Private personal-use build</dd></div>
+              <div><dt>Copyright</dt><dd>© 2026 Norn Draft</dd></div>
             </dl>
-            <p class="about-panel__privacy">Norn Draft can remain open in a browser side panel without reading the current webpage. Text is sent to the external provider you select only when you explicitly request a draft or rewrite.</p>
+            <p class="about-panel__privacy">Norn Draft can remain open in a browser side panel without reading the current webpage. Text is sent to the external provider you select only when you explicitly request a draft or rewrite. Model discovery sends only your provider API key when you explicitly refresh models.</p>
           </section>
         </div>
 
@@ -283,6 +311,9 @@
     </main>
 
     <script src="../shared/tone-presets.js"></script>
+    <script src="../shared/model-config.js"></script>
+    <script src="../shared/model-discovery.js"></script>
+    <script src="../shared/draft-limits.js"></script>
     <script src="../shared/side-panel.js"></script>
     <script src="options.js"></script>
   </body>

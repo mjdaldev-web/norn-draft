@@ -5,7 +5,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, "1.9.0");
+assert.equal(manifest.version, "2.0.0");
 assert.ok(manifest.permissions.includes("sidePanel"));
 assert.deepEqual(manifest.host_permissions, [
   "https://generativelanguage.googleapis.com/*",

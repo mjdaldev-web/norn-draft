@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0
+
+- Added provider model discovery with filtered text-capable models, local caching, one-hour refresh cooldown, and confirmation before an early refresh.
+- Added configurable message/draft and context character limits with live counters.
+- Added provider-reported token usage details below generated replies.
+- Added duplicate-generation protection and request timeouts for generation and model discovery.
+- Added collapsible optional context/details UI for a more compact popup and side panel.
+- Updated privacy/security documentation and removed personal identifying information from the current project snapshot.
+
 ## 1.9.0
 
 - Added a persistent Chrome side-panel workspace that reuses the existing drafting UI, tones, custom presets, and local draft state.
@@ -24,7 +33,7 @@
 ## 1.6.0
 
 - Refreshed Norn Draft branding with the updated bundled logo and runtime icon sizes.
-- Added About information for Mark Dalmacio (`mjdaldev`) to Settings > Privacy.
+- Added privacy-focused About information to Settings.
 - Updated privacy wording to accurately describe explicit processing and external AI provider requests.
 - Confirmed extension permissions and draft-generation behavior are unchanged.
 

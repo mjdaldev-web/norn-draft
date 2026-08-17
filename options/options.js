@@ -1,5 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
   const sidePanelPreferenceKey = window.NornDraftSidePanel.SIDE_PANEL_PREFERENCE_KEY;
+  const modelConfig = window.NornDraftModelConfig;
+  const modelDiscovery = window.NornDraftModelDiscovery;
+  const draftLimits = window.NornDraftDraftLimits;
   const defaults = {
     provider: "Gemini",
     apiKey: "",
@@ -7,6 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
     openaiApiKey: "",
     defaultTone: "Professional",
     replyLength: "Balanced",
+    promptMaxCharacters: draftLimits.DRAFT_LIMITS.prompt.defaultValue,
+    contextMaxCharacters: draftLimits.DRAFT_LIMITS.context.defaultValue,
     geminiModelPreset: "auto",
     geminiCustomModel: "",
     openaiModelPreset: "recommended",
@@ -30,12 +35,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const resetSettingsButton = document.querySelector("#reset-settings");
   const defaultToneSelect = document.querySelector("#default-tone");
   const replyLengthSelect = document.querySelector("#reply-length");
+  const promptMaxCharactersInput = document.querySelector("#prompt-max-characters");
+  const contextMaxCharactersInput = document.querySelector("#context-max-characters");
   const geminiModelPanel = document.querySelector("#gemini-model-panel");
   const geminiModelPresetSelect = document.querySelector("#gemini-model-preset");
   const geminiCustomModelInput = document.querySelector("#gemini-custom-model");
   const openaiModelPanel = document.querySelector("#openai-model-panel");
   const openaiModelPresetSelect = document.querySelector("#openai-model-preset");
   const openaiCustomModelInput = document.querySelector("#openai-custom-model");
+  const refreshGeminiModelsButton = document.querySelector("#refresh-gemini-models");
+  const refreshOpenAiModelsButton = document.querySelector("#refresh-openai-models");
+  const geminiDiscoveryStatus = document.querySelector("#gemini-model-discovery-status");
+  const openaiDiscoveryStatus = document.querySelector("#openai-model-discovery-status");
+  const geminiModelInfo = document.querySelector("#gemini-model-info");
+  const openaiModelInfo = document.querySelector("#openai-model-info");
   const historyEnabledInput = document.querySelector("#history-enabled");
   const historyLimitSelect = document.querySelector("#history-limit");
   const openInSidePanelInput = document.querySelector("#open-in-side-panel");
@@ -61,11 +74,135 @@ document.addEventListener("DOMContentLoaded", () => {
   let replyHistory = [];
   let customPresets = [];
   let editingPresetId = "";
-  const geminiModelPresets = ["auto", "flash-lite", "flash", "custom"];
-  const openaiModelPresets = ["recommended", "mini", "quality", "custom"];
+  let discoveredModels = {};
+  let modelCache = {};
+  const refreshingProviders = new Set();
+  const geminiModelPresets = modelConfig.getPresetIds("Gemini");
+  const openaiModelPresets = modelConfig.getPresetIds("OpenAI");
   const validHistoryDetailLevels = ["basic", "detailed"];
   const validModes = ["Generate Reply", "Rewrite Draft"];
   const validTones = ["Professional", "Friendly", "Empathetic", "Instructional", "Short", "Detailed"];
+
+  const populateModelSelect = (select, provider, selectedValue = "") => {
+    const config = modelConfig.getProviderConfig(provider);
+    const options = config.presets.map((preset) => {
+      const option = document.createElement("option");
+      option.value = preset.id;
+      option.textContent = preset.label;
+      return option;
+    });
+    (discoveredModels[provider] || []).forEach((model) => {
+      const option = document.createElement("option");
+      option.value = `discovered:${model.id}`;
+      option.textContent = `${model.label} (available to this key)`;
+      options.push(option);
+    });
+    const customOption = document.createElement("option");
+    customOption.value = modelConfig.CUSTOM_PRESET_ID;
+    customOption.textContent = "Custom model name";
+    options.push(customOption);
+    select.replaceChildren(...options);
+    select.value = selectedValue && Array.from(select.options).some((option) => option.value === selectedValue)
+      ? selectedValue
+      : select.value;
+  };
+
+  populateModelSelect(geminiModelPresetSelect, "Gemini");
+  populateModelSelect(openaiModelPresetSelect, "OpenAI");
+
+  const populateDiscoveredModels = () => {
+    const geminiSelection = geminiModelPresetSelect.value;
+    const openAiSelection = openaiModelPresetSelect.value;
+    populateModelSelect(geminiModelPresetSelect, "Gemini", geminiSelection);
+    populateModelSelect(openaiModelPresetSelect, "OpenAI", openAiSelection);
+  };
+
+  const setDiscoveryStatus = (provider, message) => {
+    (provider === "OpenAI" ? openaiDiscoveryStatus : geminiDiscoveryStatus).textContent = message;
+  };
+
+  const formatDiscoveryTimestamp = (timestamp) => {
+    const date = new Date(Number(timestamp));
+    return Number.isNaN(date.getTime()) ? "unknown time" : date.toLocaleString();
+  };
+
+  const getLastRefreshMessage = (provider) => {
+    const fetchedAt = modelCache?.[provider]?.fetchedAt;
+    return Number.isFinite(Number(fetchedAt)) ? ` Last refreshed ${formatDiscoveryTimestamp(fetchedAt)}.` : "";
+  };
+
+  const renderModelInfo = (provider) => {
+    const isOpenAi = provider === "OpenAI";
+    const select = isOpenAi ? openaiModelPresetSelect : geminiModelPresetSelect;
+    const customInput = isOpenAi ? openaiCustomModelInput : geminiCustomModelInput;
+    const target = isOpenAi ? openaiModelInfo : geminiModelInfo;
+    const info = modelConfig.getModelInfo(provider, select.value, customInput.value, discoveredModels[provider] || []);
+    const estimateNote = info.isEstimated ? " Estimated profile; check the provider's current pricing and model documentation." : "";
+    target.textContent = `${info.description} ${info.profile}.${estimateNote}`;
+  };
+
+  const refreshModels = async (provider, button) => {
+    if (refreshingProviders.has(provider)) {
+      return;
+    }
+
+    const cooldownRemaining = modelDiscovery.getCooldownRemaining(modelCache, provider);
+    if (cooldownRemaining > 0) {
+      const seconds = Math.ceil(cooldownRemaining / 1000);
+      const minutes = Math.ceil(seconds / 60);
+      const shouldRefreshAgain = window.confirm(
+        `${provider} models were already refreshed${getLastRefreshMessage(provider)}\n\n` +
+        `Another refresh will make another model-list API request. Refresh again anyway? ` +
+        `The normal cooldown ends in about ${minutes} minute${minutes === 1 ? "" : "s"}.`
+      );
+      if (!shouldRefreshAgain) {
+        setDiscoveryStatus(provider, `Refresh cancelled. Models were already refreshed${getLastRefreshMessage(provider)}`);
+        return;
+      }
+    }
+
+    const apiKey = provider === "OpenAI" ? currentSettings.openaiApiKey : currentSettings.geminiApiKey;
+    if (!apiKey) {
+      setDiscoveryStatus(provider, `Add a ${provider} API key before refreshing.`);
+      return;
+    }
+    refreshingProviders.add(provider);
+    button.disabled = true;
+    setDiscoveryStatus(provider, "Refreshing available models...");
+    try {
+      const models = await modelDiscovery.discoverModels({ provider, apiKey });
+      modelCache = await modelDiscovery.writeCachedModels(storage, modelCache, provider, models);
+      discoveredModels[provider] = models;
+      populateDiscoveredModels();
+      renderModelInfo(provider);
+      setDiscoveryStatus(provider, `${models.length} usable model${models.length === 1 ? "" : "s"} found. Cached for 24 hours.${getLastRefreshMessage(provider)}`);
+    } catch (error) {
+      setDiscoveryStatus(provider, "Could not refresh models. Built-in presets remain available.");
+    } finally {
+      refreshingProviders.delete(provider);
+      button.disabled = false;
+    }
+  };
+
+  const loadDiscoveredModels = async () => {
+    try {
+      modelCache = await modelDiscovery.readCache(storage);
+      discoveredModels = {
+        Gemini: modelDiscovery.getFreshCachedModels(modelCache, "Gemini"),
+        OpenAI: modelDiscovery.getFreshCachedModels(modelCache, "OpenAI")
+      };
+      populateDiscoveredModels();
+      Object.keys(discoveredModels).forEach((provider) => {
+        if (discoveredModels[provider].length || modelCache?.[provider]?.fetchedAt) {
+          setDiscoveryStatus(provider, `${discoveredModels[provider].length} cached model${discoveredModels[provider].length === 1 ? "" : "s"} available.${getLastRefreshMessage(provider)}`);
+        }
+      });
+    } catch (error) {
+      discoveredModels = {};
+    }
+  };
+
+  const isAvailableModelPreset = (select, value) => Array.from(select.options).some((option) => option.value === value);
 
   const getHistoryLimit = () => {
     return currentSettings.historyLimit === "20" ? 20 : 10;
@@ -516,6 +653,8 @@ document.addEventListener("DOMContentLoaded", () => {
       openaiApiKey: currentSettings.openaiApiKey || "",
       defaultTone: defaultToneSelect.value,
       replyLength: replyLengthSelect.value,
+      promptMaxCharacters: draftLimits.getLimit("prompt", promptMaxCharactersInput.value),
+      contextMaxCharacters: draftLimits.getLimit("context", contextMaxCharactersInput.value),
       geminiModelPreset: geminiModelPresetSelect.value,
       geminiCustomModel: geminiCustomModelInput.value.trim(),
       openaiModelPreset: openaiModelPresetSelect.value,
@@ -536,11 +675,15 @@ document.addEventListener("DOMContentLoaded", () => {
     setSelectedProvider(currentSettings.provider);
     defaultToneSelect.value = currentSettings.defaultTone;
     replyLengthSelect.value = currentSettings.replyLength;
-    geminiModelPresetSelect.value = geminiModelPresets.includes(currentSettings.geminiModelPreset)
+    currentSettings.promptMaxCharacters = draftLimits.getLimit("prompt", currentSettings.promptMaxCharacters);
+    currentSettings.contextMaxCharacters = draftLimits.getLimit("context", currentSettings.contextMaxCharacters);
+    promptMaxCharactersInput.value = currentSettings.promptMaxCharacters;
+    contextMaxCharactersInput.value = currentSettings.contextMaxCharacters;
+    geminiModelPresetSelect.value = isAvailableModelPreset(geminiModelPresetSelect, currentSettings.geminiModelPreset)
       ? currentSettings.geminiModelPreset
       : defaults.geminiModelPreset;
     geminiCustomModelInput.value = currentSettings.geminiCustomModel;
-    openaiModelPresetSelect.value = openaiModelPresets.includes(currentSettings.openaiModelPreset)
+    openaiModelPresetSelect.value = isAvailableModelPreset(openaiModelPresetSelect, currentSettings.openaiModelPreset)
       ? currentSettings.openaiModelPreset
       : defaults.openaiModelPreset;
     openaiCustomModelInput.value = currentSettings.openaiCustomModel;
@@ -552,6 +695,8 @@ document.addEventListener("DOMContentLoaded", () => {
     syncOpenAiCustomModelInput();
     syncProviderModelSections();
     syncApiKeyField();
+    renderModelInfo("Gemini");
+    renderModelInfo("OpenAI");
     renderHistory();
   };
 
@@ -802,11 +947,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   geminiModelPresetSelect.addEventListener("change", () => {
     syncCustomModelInput();
+    renderModelInfo("Gemini");
   });
 
   openaiModelPresetSelect.addEventListener("change", () => {
     syncOpenAiCustomModelInput();
+    renderModelInfo("OpenAI");
   });
+
+  geminiCustomModelInput.addEventListener("input", () => renderModelInfo("Gemini"));
+  openaiCustomModelInput.addEventListener("input", () => renderModelInfo("OpenAI"));
+
+  refreshGeminiModelsButton.addEventListener("click", () => refreshModels("Gemini", refreshGeminiModelsButton));
+  refreshOpenAiModelsButton.addEventListener("click", () => refreshModels("OpenAI", refreshOpenAiModelsButton));
 
   form.querySelectorAll('input[name="provider"]').forEach((providerInput) => {
     providerInput.addEventListener("change", () => {
@@ -834,7 +987,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  loadSettings()
+  loadDiscoveredModels()
+    .then(loadSettings)
     .then(loadCustomPresets)
     .then(loadReplyHistory)
     .then(() => {
